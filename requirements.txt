@@ -1,0 +1,6 @@
+torch 
+torchvision
+scikit-image
+matplotlib
+pyyaml
+tqdm
