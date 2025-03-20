@@ -20,9 +20,9 @@ class Trainer:
         self.model = CondTransformer(self.tokenizer,
                                      condition_vocab=self.args.num_classes,
                                      max_pos_len=1024,
-                                     d_model=64,
-                                     num_transformer_layers=4,
-                                     num_attn_heads=2,)
+                                     d_model=768,
+                                     num_transformer_layers=12,
+                                     num_attn_heads=12,)
         self.dls = make_dl(self.args.data, train_bsz=self.args.bsz, val_bsz=self.args.bsz)
         self.opt = torch.optim.AdamW(self.model.lm.parameters(), lr=self.args.lr)
 

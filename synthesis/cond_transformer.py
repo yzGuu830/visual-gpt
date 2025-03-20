@@ -12,9 +12,9 @@ class CondTransformer(nn.Module):
                  visual_tokenizer,
                  condition_vocab=10,
                  max_pos_len=1024,
-                 d_model=256,
-                 num_transformer_layers=8,
-                 num_attn_heads=8,
+                 d_model=768,
+                 num_transformer_layers=12,
+                 num_attn_heads=12,
                  ):
         super().__init__()
         
@@ -58,10 +58,10 @@ class CondTransformer(nn.Module):
 
         # concatenate latent code and condition code
         in_seq = torch.cat([c, z], dim=-1) # [bsz x (HW+1)]
-        outputs = self.lm(input_ids=in_seq, return_dict=True)
+        outputs = self.lm(input_ids=in_seq[:, :-1], return_dict=True)
 
         lm_logits = outputs.logits
-        z_logits = lm_logits[:, num_c_tokens:].contiguous()
+        z_logits = lm_logits[:, num_c_tokens-1:].contiguous()
         loss = nn.functional.cross_entropy(z_logits.view(-1, z_logits.size(-1)), z.view(-1))
 
         return loss, lm_logits
@@ -113,6 +113,16 @@ class CondTransformer(nn.Module):
                 _, dec_token = torch.topk(probs, k=1, dim=-1)
 
             z = torch.cat((z, dec_token), dim=1)
+        # outputs = self.lm.generate(
+        #     input_ids = z,
+        #     do_sample = do_sample,
+        #     max_length = math.prod(latent_size) + 1,
+        #     min_length = math.prod(latent_size) + 1,
+        #     temperature = temperature,
+        #     top_k = top_k,
+        # )
+        # print('model.generate(): ', outputs)
+        # 1/0
 
         z = z[:, c.size(1):]
         x_hat, code = self.reconstruct_from_code(z, latent_size)
