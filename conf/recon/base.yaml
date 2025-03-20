@@ -22,4 +22,5 @@ exp:
   steps: 5000
   pretrain_steps: 500
   beta: 2.0
-  log_interval: 500
+  log_interval: 5
+  eval_interval: 500

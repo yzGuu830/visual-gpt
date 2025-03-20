@@ -9,6 +9,7 @@ from utils import *
 
 from vector_quantize import freeze_vq_forward_hook
 
+import wandb
 
 
 class Trainer:
@@ -70,7 +71,11 @@ class Trainer:
             pbar.set_description(desc)
             # f.write(desc + '\n')
 
-            if pbar.n > self.conf.exp.pretrain_steps and pbar.n % self.conf.exp.log_interval == 0:
+            if wandb.run is not None and pbar.n % self.conf.exp.log_interval == 0: 
+                log_stats = {'loss': loss.item(), 'recon_loss': recon_loss.item(), 'vq_loss': vq_loss.item(), 'vq_active_ratio': active_ratio}
+                wandb.log(log_stats)
+
+            if pbar.n > self.conf.exp.pretrain_steps and pbar.n % self.conf.exp.eval_interval == 0:
                 print(f'[Test step {pbar.n+1}/{self.conf.exp.steps}]... ', end='', file=f)
                 self.eval_epoch(tag=f'training-step-{pbar.n}', f=f)
                 self.model.train()
@@ -105,6 +110,7 @@ class Trainer:
             for i in range(x_np.shape[0]):
                 for m, fn in METRIC_FUNCS.items():
                     logs[m].append(fn(x_np[i], x_hat_np[i]))
+            break
 
         plot_recons(x_np, x_hat_np, tag, self.arg.save_path)
 
@@ -113,3 +119,6 @@ class Trainer:
         util_ratio, _ = e_counter.compute_utilization()
         logs['util_ratio'] = util_ratio*100
         print(' | '.join([f'{k}: {v:.5f}' for k, v in logs.items()]), file=f)
+        
+        if wandb.run is not None:
+            wandb.log(logs)

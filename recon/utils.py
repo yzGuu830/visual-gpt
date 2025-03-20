@@ -24,10 +24,12 @@ class SSIM:
         """x, y: (C, H, W)"""
         return structural_similarity(x, y, channel_axis=0, data_range=1)
 
+
 METRIC_FUNCS = {
     'psnr': PSNR(),
     'ssim': SSIM(),
 }
+
 
 def plot_recons(raws: list, 
                 recons: list, 
@@ -42,16 +44,32 @@ def plot_recons(raws: list,
     """
 
     num_samples = len(raws)
-    fig, axes = plt.subplots(2, num_samples, figsize=(num_samples*2, 5))
-    for i in range(num_samples):
-        axes[0, i].imshow(raws[i].transpose(1, 2, 0))
+    assert num_samples % 2 == 0, "Batch size must be even to split into 4 rows"
+    
+    half_size = num_samples // 2  # To split into two groups
+    fig, axes = plt.subplots(4, half_size, figsize=(half_size * 2, 10))
+
+    # First two rows: Raw images
+    for i in range(half_size):
+        axes[0, i].imshow(raws[i].transpose(1, 2, 0))  # Row 1 (first half of raw images)
         axes[0, i].axis('off')
-        axes[1, i].imshow(recons[i].transpose(1, 2, 0))
+
+        axes[1, i].imshow(raws[half_size + i].transpose(1, 2, 0))  # Row 2 (second half of raw images)
         axes[1, i].axis('off')
+
+    # Last two rows: Reconstructed images
+    for i in range(half_size):
+        axes[2, i].imshow(recons[i].transpose(1, 2, 0))  # Row 3 (first half of recons)
+        axes[2, i].axis('off')
+
+        axes[3, i].imshow(recons[half_size + i].transpose(1, 2, 0))  # Row 4 (second half of recons)
+        axes[3, i].axis('off')
+
     plt.suptitle(tag)
 
     if save_path is not None:
-        if not os.path.exists(save_path): os.makedirs(save_path)
+        if not os.path.exists(save_path): 
+            os.makedirs(save_path)
         fig.savefig(os.path.join(save_path, f'{tag}.png'), bbox_inches='tight', dpi=120)
     else:
         plt.show()

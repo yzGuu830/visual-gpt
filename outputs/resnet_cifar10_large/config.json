@@ -1,8 +1,0 @@
-{
-    "in_dim": 3, 
-    "dim_z": 256, 
-    "num_scales": 2, 
-    "blk_depth": 4, 
-    "num_codewords": 1024, 
-    "embedding_dim": 256
-}
