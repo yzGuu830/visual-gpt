@@ -17,7 +17,7 @@ model:
 
 discriminator:
   input_nc: 3 
-  ndf: 32
+  ndf: 64
   n_layers: 3
   use_actnorm: false
 
@@ -26,8 +26,8 @@ exp:
   lr: 0.0001
   bsz: 128
   steps: 10000
-  pretrain_steps: 10
+  pretrain_steps: 2000
   beta: 2.0
   log_interval: 5
   eval_interval: 1000
-  disc_start: 20
+  disc_start: 5000

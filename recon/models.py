@@ -54,7 +54,9 @@ def load_model(conf):
 
 
 class NLayerDiscriminator(nn.Module):
-    """Defines a PatchGAN discriminator as in Pix2Pix
+    """
+    Copied from https://github.com/CompVis/taming-transformers/blob/master/taming/modules/discriminator/model.py
+    Defines a PatchGAN discriminator as in Pix2Pix
         --> see https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py
     """
     def __init__(self, input_nc=3, ndf=64, n_layers=3, use_actnorm=False):
