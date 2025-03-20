@@ -9,12 +9,14 @@ from tqdm import tqdm
 import torch
 import argparse
 
+from transformers import get_scheduler
+
 
 class Trainer:
     def __init__(self, args) -> None:
         self.args = args
 
-    def load(self, ):
+    def load(self, train_steps, warmup_steps):
 
         self.tokenizer = VisualTokenizer.from_pretrained(self.args.from_pretrained)
         self.model = CondTransformer(self.tokenizer,
@@ -24,11 +26,17 @@ class Trainer:
                                      num_transformer_layers=12,
                                      num_attn_heads=12,)
         self.dls = make_dl(self.args.data, train_bsz=self.args.bsz, val_bsz=self.args.bsz)
-        self.opt = torch.optim.AdamW(self.model.lm.parameters(), lr=self.args.lr)
+        self.opt = torch.optim.AdamW(self.model.lm.parameters(), lr=self.args.lr, weight_decay=self.args.wd)
+        self.scheduler = get_scheduler(
+            self.args.scheduler,
+            optimizer=self.opt,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=train_steps,
+        )
 
-    def train(self, train_steps=1000, eval_every=300, device='cuda', save_path='./results/baseline_lm'):
+    def train(self, train_steps=1000, warmup_steps=100, eval_every=300, device='cuda', save_path='./results/baseline_lm'):
         
-        self.load()
+        self.load(train_steps, warmup_steps)
         print(f"Number of parameters [VQ-VAE]: {sum(p.numel() for p in self.model.visual_tokenizer.parameters())}")
         print(f"Number of parameters [Transformer]: {sum(p.numel() for p in self.model.lm.parameters())}")
 
@@ -44,6 +52,7 @@ class Trainer:
             loss, _ = self.model(x, cond=y.unsqueeze(1))
             loss.backward()
             self.opt.step()
+            self.scheduler.step()
             pbar.update(1)
 
             pbar.set_description(f'[train step {pbar.n}] nll. loss: {loss.item():.4f} | ' + \
@@ -85,10 +94,13 @@ def parse_args():
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--exp_name', type=str, default='baseline', help='experiment name')
     
-    parser.add_argument('--bsz', type=int, default=32)
-    parser.add_argument('--lr', type=float, default=3e-4)
+    parser.add_argument('--bsz', type=int, default=64)
+    parser.add_argument('--wd', type=float, default=1e-2)
+    parser.add_argument('--lr', type=float, default=5e-6)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--train_steps', type=int, default=5000)
+    parser.add_argument('--scheduler', type=str, default='cosine')
+    parser.add_argument('--warmup_steps', type=int, default=100)
     parser.add_argument('--eval_every', type=int, default=1000)
 
     return parser.parse_args()
@@ -99,7 +111,7 @@ def run():
 
     trainer = Trainer(args)
 
-    trainer.train(train_steps=args.train_steps, eval_every=args.eval_every, 
+    trainer.train(train_steps=args.train_steps, warmup_steps=args.warmup_steps, eval_every=args.eval_every, 
                   device=args.device, save_path=os.path.join(args.output_path, args.exp_name))
 
 
