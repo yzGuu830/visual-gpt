@@ -48,6 +48,12 @@ python train_tokenizer.py \
     --wandb_project deepvq
 
 python train_tokenizer.py \
+    --data_name coco2017custom \
+    --save_path ../outputs/resnetvq-coco17custom \
+    --conf_path conf/recon/base_coco.yaml \
+    --wandb_project deepvq
+
+python train_tokenizer.py \
     --data_name cifar10 \
     --save_path ../outputs/resnetvq-cifar10-gan \
     --conf_path conf/recon/base_adv.yaml \
