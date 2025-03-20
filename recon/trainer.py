@@ -7,6 +7,8 @@ from .utils import *
 from data import make_dl, make_inf_dl
 from utils import *
 
+from vector_quantize import freeze_vq_forward_hook
+
 
 
 class Trainer:
@@ -23,6 +25,11 @@ class Trainer:
         self.model = load_model(self.conf.model)
         self.model.to(self.arg.device)
 
+        if self.conf.exp.pretrain_steps > 0:
+            self.model.quantizer.register_buffer('is_freezed', torch.ones(1))
+            self.model.quantizer.register_forward_hook(freeze_vq_forward_hook)
+            print(f'pretraining autoencoder for {self.conf.exp.pretrain_steps} steps')
+
         num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(f'Model Loaded!\nModel # of Params: {num_params}')
 
@@ -36,7 +43,8 @@ class Trainer:
         self.model.train()
 
         if not os.path.exists(self.arg.save_path): os.makedirs(self.arg.save_path)
-        f = open(self.arg.save_path + '/log.txt', 'w')
+        # f = open(self.arg.save_path + '/log.txt', 'w')
+        f = None
 
         pbar = tqdm(total=self.conf.exp.steps)
         dl = make_inf_dl(self.dls['train'])
@@ -54,7 +62,7 @@ class Trainer:
             self.opt.step()
             pbar.update(1)
             
-            active_ratio = vq_out['q'].unique().numel() / self.conf.model.num_codewords
+            active_ratio = vq_out['q'].unique().numel() / self.conf.model.num_codewords if self.model.quantizer.is_freezed.item() == 0 else 0
             desc = f'[Train step {pbar.n}/{self.conf.exp.steps}] total loss: {loss.item():.4f} | ' + \
                    f'recon loss: {recon_loss.item():.4f} | ' + \
                    f'vq loss: {vq_loss.item():.4f} | ' + \
@@ -62,7 +70,7 @@ class Trainer:
             pbar.set_description(desc)
             # f.write(desc + '\n')
 
-            if pbar.n % self.conf.exp.log_interval == 0:
+            if pbar.n > self.conf.exp.pretrain_steps and pbar.n % self.conf.exp.log_interval == 0:
                 print(f'[Test step {pbar.n+1}/{self.conf.exp.steps}]... ', end='', file=f)
                 self.eval_epoch(tag=f'training-step-{pbar.n}', f=f)
                 self.model.train()
@@ -72,6 +80,10 @@ class Trainer:
                 self.eval_epoch(tag='final', f=f)
                 save_checkpoint(self.model, self.arg.save_path)
                 return
+            
+            if pbar.n == self.conf.exp.pretrain_steps:
+                self.model.quantizer.is_freezed.fill_(0)
+                print(f'Activating VQ layer after {self.conf.exp.pretrain_steps} steps')
             
             
     @torch.no_grad()

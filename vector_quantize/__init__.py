@@ -1,1 +1,1 @@
-from .vector_quantize import VectorQuantize
+from .vector_quantize import VectorQuantize, freeze_vq_forward_hook

@@ -10,6 +10,20 @@ def ste(z, z_q):
     return z + (z_q - z).detach()
 
 
+def freeze_vq_forward_hook(module, inputs, outputs):
+    if not module.training or module.is_freezed.item() == 0:
+        return
+    
+    z_e = inputs[0]
+    outputs = {
+        'z_q': z_e,
+        'q': None,
+        'cm_loss': torch.zeros(z_e.shape[0], device=z_e.device),
+        'cb_loss': torch.zeros(z_e.shape[0], device=z_e.device),
+    }
+    return outputs
+
+
 class VectorQuantize(_BaseVectorQuantizeLayer):
     def __init__(self,
                  num_codewords: int,
@@ -17,6 +31,7 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
                  cos_dist: bool = False,
                  proj_dim: int = None,
                  random_proj: bool = False,
+                 pretrain: bool = False,
                  **kwargs
                  ):
         super().__init__(num_codewords, embedding_dim, **kwargs)
@@ -26,6 +41,7 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
         self.proj_dim = proj_dim
         self.random_proj = random_proj
         self._init_projection_layers()
+
 
     def _init_projection_layers(self, ):
         if self.proj_dim is None: 
