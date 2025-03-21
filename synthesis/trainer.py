@@ -18,7 +18,7 @@ class Trainer:
 
     def load(self, train_steps, warmup_steps):
 
-        self.tokenizer = VisualTokenizer.from_pretrained(self.conf.tokenizer.from_pretrained)
+        self.tokenizer = VisualTokenizer.from_pretrained(self.arg.from_pretrained)
         self.model = CondTransformer(self.tokenizer,
                                      condition_vocab=self.conf.transformer.num_classes,
                                      max_pos_len=self.conf.transformer.max_pos_len,

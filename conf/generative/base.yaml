@@ -1,7 +1,3 @@
-
-tokenizer:
-  from_pretrained: ../outputs/resnetvq-coco17custom
-
 latent_size: [16, 16]
 transformer: 
   num_classes: 4
