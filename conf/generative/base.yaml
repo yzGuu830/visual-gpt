@@ -6,6 +6,6 @@ latent_size: [16, 16]
 transformer: 
   num_classes: 4
   max_pos_len: 1024
-  d_model: 32
-  num_transformer_layers: 2
-  num_attn_heads: 4
+  d_model: 768
+  num_transformer_layers: 12
+  num_attn_heads: 12
