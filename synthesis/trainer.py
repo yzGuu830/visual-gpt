@@ -71,7 +71,7 @@ class Trainer:
                     save_model(self.model, save_path)
                     return
     
-    def eval_epoch(self, do_sample=False, num_gen_imgs=10, device='cuda'):
+    def eval_epoch(self, do_sample=False, num_gen_imgs=1, device='cuda'):
         
         self.model.lm.eval()
         gens = []

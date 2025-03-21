@@ -76,12 +76,20 @@ def vis_gens(imgs: torch.Tensor, iteration, save_path: str = None):
     elif num_classes == len(COCO2017CUSTOM_LABELS):
         labels = COCO2017CUSTOM_LABELS
 
-    fig, axes = plt.subplots(num_samples, num_classes, figsize=(num_classes, num_samples))
+    fig, axes = plt.subplots(num_samples, num_classes, figsize=(num_classes, 10))
     for j in range(num_classes):
-        axes[0, j].set_title(labels[j])
+        if num_samples == 1:
+            axes[j].set_title(labels[j])
+        else:
+            axes[0, j].set_title(labels[j])
+        
         for i in range(num_samples):
-            axes[i, j].imshow(imgs[j, i].cpu().numpy().transpose(1, 2, 0))
-            axes[i, j].axis('off')
+            if num_samples == 1:
+                axes[j].imshow(imgs[j, i].cpu().numpy().transpose(1, 2, 0))
+                axes[j].axis('off')
+            else:
+                axes[i, j].imshow(imgs[j, i].cpu().numpy().transpose(1, 2, 0))
+                axes[i, j].axis('off')
 
     plt.suptitle(f'LM Generated Imgs @ Iteration {iteration}')
     plt.tight_layout()
