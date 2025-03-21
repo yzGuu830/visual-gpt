@@ -3,7 +3,6 @@ data:
 
 
 model:
-  model_name: resnet-vqvae-gan
   in_dim: 3 
   dim_z: 256
   num_scales: 2

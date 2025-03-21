@@ -13,6 +13,7 @@ def parse_args_confs():
     parser.add_argument('--conf_path', type=str, default='conf/base.yaml')
     parser.add_argument('--adv_training', action='store_true')
     parser.add_argument('--wandb_project', type=str, default=None)
+    parser.add_argument('--seed', type=int, default=53)
 
     args = parser.parse_args()
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -24,6 +25,7 @@ def parse_args_confs():
 if __name__ == "__main__":
     
     arg, conf = parse_args_confs()
+    seed_everything(arg.seed)
     if arg.adv_training:
         trainer = ReconTrainerAdv(arg, conf)
     else:

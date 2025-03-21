@@ -66,17 +66,26 @@ def img_grid_show(data, disp_num=256, fig_size=(10,20), show=False, save=None):
 
 
 CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+COCO2017CUSTOM_LABELS = ['car', 'bird', 'cat', 'dog']
 def vis_gens(imgs: torch.Tensor, iteration, save_path: str = None):
-    num_samples = imgs.size(0)
+    num_classes, num_samples = imgs.size(0), imgs.size(1)
 
-    fig, axes = plt.subplots(1, num_samples, figsize=(num_samples*1.75, 4))
-    for i in range(num_samples):
-        axes[i].imshow(imgs[i].cpu().numpy().transpose(1, 2, 0))
-        axes[i].set_title(CIFAR10_LABELS[i])
-        axes[i].axis('off')
+    # this needs refactoring
+    if num_classes == len(CIFAR10_LABELS):
+        labels = CIFAR10_LABELS
+    elif num_classes == len(COCO2017CUSTOM_LABELS):
+        labels = COCO2017CUSTOM_LABELS
+
+    fig, axes = plt.subplots(num_samples, num_classes, figsize=(num_classes, num_samples))
+    for j in range(num_classes):
+        axes[0, j].set_title(labels[j])
+        for i in range(num_samples):
+            axes[i, j].imshow(imgs[j, i].cpu().numpy().transpose(1, 2, 0))
+            axes[i, j].axis('off')
 
     plt.suptitle(f'LM Generated Imgs @ Iteration {iteration}')
-    
+    plt.tight_layout()
+
     if save_path is not None:
         if not os.path.exists(save_path): os.makedirs(save_path)
         fig.savefig(os.path.join(save_path, f'iteration_{iteration}.png'), bbox_inches='tight', dpi=120)

@@ -45,6 +45,7 @@ class Trainer:
         self.model.train()
 
         if not os.path.exists(self.arg.save_path): os.makedirs(self.arg.save_path)
+        json.dump(namespace2dict(self.conf.model), open(self.arg.save_path + '/config.json', 'w'), indent=4)
         # f = open(self.arg.save_path + '/log.txt', 'w')
         f = None
 

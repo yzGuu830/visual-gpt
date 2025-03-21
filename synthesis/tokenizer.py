@@ -13,8 +13,8 @@ class VisualTokenizer(nn.Module):
         
         config = json.load(open(f"{pretrained_model_name_or_path}/config.json", "r"))
         model = VQResNet(**config)
-        model.load_state_dict(torch.load(f"{pretrained_model_name_or_path}/checkpoint.pth", map_location="cpu", weights_only=True))
-        print("model loaded from pretrained!")
+        model.load_state_dict(torch.load(f"{pretrained_model_name_or_path}/model.pth", map_location="cpu", weights_only=True), strict=False)
+        print("visual tokenizer loaded from pretrained!")
         
         model.eval()
         tokenizer = cls()

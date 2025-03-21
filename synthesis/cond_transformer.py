@@ -113,16 +113,6 @@ class CondTransformer(nn.Module):
                 _, dec_token = torch.topk(probs, k=1, dim=-1)
 
             z = torch.cat((z, dec_token), dim=1)
-        # outputs = self.lm.generate(
-        #     input_ids = z,
-        #     do_sample = do_sample,
-        #     max_length = math.prod(latent_size) + 1,
-        #     min_length = math.prod(latent_size) + 1,
-        #     temperature = temperature,
-        #     top_k = top_k,
-        # )
-        # print('model.generate(): ', outputs)
-        # 1/0
 
         z = z[:, c.size(1):]
         x_hat, code = self.reconstruct_from_code(z, latent_size)
