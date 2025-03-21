@@ -44,10 +44,27 @@ if __name__ == "__main__":
 
 """
 python train_lm.py \
+    --data cifar10 \
+    --from_pretrained ../outputs/resnetvq-cifar10 \
+    --output_path ../outputs \
+    --conf_path conf/generative/base.yaml \
+    --device cpu \
+    --exp_name gpt2-cifar10 \
+    --bsz 64 \
+    --lr 5e-6 \
+    --wd 1e-2 \
+    --scheduler cosine \
+    --seed 53 \
+    --train_steps 10000 \
+    --warmup_steps 1000 \
+    --eval_every 2000 \
+    --wandb_project deepvq
+
+python train_lm.py \
     --data coco2017custom \
     --from_pretrained ../outputs/resnetvq-coco2017custom \
     --output_path ../outputs \
-    --conf_path conf/generative/base.yaml \
+    --conf_path conf/generative/base_coco.yaml \
     --device cpu \
     --exp_name gpt2-coco2017custom \
     --bsz 64 \
