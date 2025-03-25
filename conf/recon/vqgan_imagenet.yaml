@@ -6,6 +6,7 @@ data:
 
 model:
   model_name: vqgan-ae
+  factorized_dim: null
   ae:
     double_z: False
     z_channels: 256
@@ -20,10 +21,10 @@ model:
   vq:
     num_codewords: 1024
     embedding_dim: 256
+    z_dim: 256
     cos_dist: True
     proj_dim: 8
     random_proj: True
-    learnable_codebook: True
 
 
 exp:

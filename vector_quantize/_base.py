@@ -3,28 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def compute_dist(z_e, codebook, cos_dist=False, proj_matrix=None):
-    """
-    Args:
-        z_e (Tensor): flattened latent with shape (bsz, *, embedding_dim), * denotes flattened quantized dimensions
-        codebook (Tensor): embedding weight tensor with shape (num_codewords, embedding_dim)
-        cos_dist (bool): whether to use cosine distance or not
-        proj_matrix (Tensor): projection matrix with shape (embedding_dim, proj_dim) for low-dimensional search
 
-    Returns:
-        dists (Tensor): distance between z_e and each codewords in codebook with shape (bsz, *, num_codewords)
-    """
-
-    if cos_dist:
-        z_e = F.normalize(z_e, p=2, dim=-1)
-        codebook = F.normalize(codebook, p=2, dim=-1)
-
-    if proj_matrix is not None:
-        z_e = z_e @ proj_matrix
-        codebook = codebook @ proj_matrix
-
-    dists = torch.cdist(z_e, codebook, p=2) # (bsz, *, num_codewords)
-    return dists
 
 
 class _BaseVectorQuantizeLayer(nn.Module):
@@ -53,12 +32,28 @@ class _BaseVectorQuantizeLayer(nn.Module):
             self.register_buffer('codebook', embed)
 
     def prepare_inputs(self, z_e):
-
-        raise NotImplementedError
+        """
+        Reshape 2D Latent for Vector Quantization
+        Args:
+            z_e (Tensor): latent with shape (bsz, dim, h, w)
+        Returns:
+            z_e (Tensor): flattened latent with shape (bsz, hw, dim)
+        """
+        if z_e.dim() == 3:
+            raise ValueError("Input tensor should have shape (bsz, dim, h, w), but got {}".format(z_e.shape))
+        
+        return z_e.flatten(2).transpose(1, 2)
     
-    def recover_original(self, z_q):
-
-        raise NotImplementedError
+    def recover_original(self, z_q, z_shape):
+        """
+        Recover Original Shape of 2D Latent
+        Args:
+            z_q (Tensor): quantized latent with shape (bsz, hw, dim)
+            z_shape (tuple): original shape of latent (h, w)
+        """
+        bsz, _, dim = z_q.shape
+        
+        return z_q.transpose(1, 2).view(bsz, dim, *z_shape)
 
     def quantize(self, z_e):
 

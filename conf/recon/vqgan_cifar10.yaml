@@ -6,6 +6,7 @@ data:
 
 model:
   model_name: vqgan-ae
+  factorized_dim: 8 
   ae:
     double_z: False
     z_channels: 256
@@ -19,16 +20,15 @@ model:
     dropout: 0.0
   vq:
     num_codewords: 512
-    embedding_dim: 256
-    cos_dist: True
-    proj_dim: 8
-    random_proj: True
-    learnable_codebook: True
+    embedding_dim: 8
+    z_dim: 8
+    cos_dist: False
+    penalty_weight: 0.0
 
 
 exp:
   lr: 0.0001
-  bsz: 4
+  bsz: 12
   steps: 10000
   pretrain_steps: 0
   beta: 2.0

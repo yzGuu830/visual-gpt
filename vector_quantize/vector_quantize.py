@@ -3,89 +3,63 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from ._base import _BaseVectorQuantizeLayer, compute_dist
+from ._base import _BaseVectorQuantizeLayer
+from ._utils import *
 
-
-def ste(z, z_q):
-    return z + (z_q - z).detach()
-
-
-def freeze_vq_forward_hook(module, inputs, outputs):
-    if not module.training or module.is_freezed.item() == 0:
-        return
-    
-    z_e = inputs[0]
-    outputs = {
-        'z_q': z_e,
-        'q': None,
-        'cm_loss': torch.zeros(z_e.shape[0], device=z_e.device),
-        'cb_loss': torch.zeros(z_e.shape[0], device=z_e.device),
-    }
-    return outputs
 
 
 class VectorQuantize(_BaseVectorQuantizeLayer):
     def __init__(self,
                  num_codewords: int,
                  embedding_dim: int,
-                 cos_dist: bool = False,
-                 proj_dim: int = None,
-                 random_proj: bool = False,
-                 pretrain: bool = False,
+                 z_dim: int, 
+                 cos_dist: bool = False, # use normalized l2 distance
+                 proj_dim: int = None, # low-dimensional search
+                 random_proj: bool = False, # use random projection matrix
+                 penalty_weight: float = 0.0, # penalize non-uniform dists
                  **kwargs
                  ):
         super().__init__(num_codewords, embedding_dim, **kwargs)
 
+        self.z_dim = z_dim
         self.cos_dist = cos_dist
 
         self.proj_dim = proj_dim
         self.random_proj = random_proj
         self._init_projection_layers()
 
-
-    def _init_projection_layers(self, ):
-        if self.proj_dim is None: 
-            self.proj_matrix = None
-            return 
-        
-        print("[VectorQuantize] Enabled factorization into low dimensional space ", end="")
-        if not self.random_proj:
-            self.proj_matrix = nn.Parameter(
-                torch.empty(self.embedding_dim, self.proj_dim), requires_grad=True)
-            print("with learnable projection matrix")
-        else:
-            proj_matrix = torch.empty(self.embedding_dim, self.proj_dim)
-            nn.init.xavier_normal_(proj_matrix) # TODO: need other distribution for random projection
-            self.register_buffer('proj_matrix', proj_matrix)
-            print("with random projection matrix")
+        self.penalty_weight = penalty_weight
 
     def forward(self, z_e):
         """
         Args:
-            z_e (Tensor): latent with shape (bsz, *, embedding_dim), * denotes flattened quantized dimensions
+            z_e (Tensor): latent with shape (bsz, hw, dim)
 
         Returns:
             -- dict --
-            z_q (Tensor): quantized latent with shape (bsz, *, embedding_dim)
-            q (Tensor): discrete indices with shape (bsz, *)
+            z_q (Tensor): quantized latent with shape (bsz, hw, dim)
+            q (Tensor): discrete indices with shape (bsz, hw)
             cm_loss (Tensor): commitment loss (update encoder)
             cb_loss (Tensor): codebook loss (update codebook)
-        """
-        
-        with torch.no_grad():
-            dists = compute_dist(z_e, 
-                                 self.codebook, 
-                                 cos_dist=self.cos_dist, 
-                                 proj_matrix=self.proj_matrix)
+        """         
+        dists = compute_dist(z_e, 
+                             self.codebook, 
+                             cos_dist=self.cos_dist,
+                             z_proj_matrix=self.z_proj_matrix,
+                             c_proj_matrix=self.c_proj_matrix)
             
         q = dists.min(dim=-1).indices
         z_q = F.embedding(q, self.codebook)
 
         if self.training:
             z_q = ste(z_e, z_q)
-
+        
         cm_loss, cb_loss = self.compute_loss(z_e, z_q)
 
+        if self.penalty_weight > 0: # encourage dists to be uniform
+            penalty_loss = self.penalty_loss(dists)
+            cm_loss += self.penalty_weight * penalty_loss
+        
         return {
             'z_q': z_q,
             'q': q,
@@ -93,14 +67,23 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
             'cb_loss': cb_loss,
         }
 
+
     def compute_loss(self, z_e, z_q):
         cm_loss = F.mse_loss(z_q.detach(), z_e, reduction="none").mean([1, 2])
         cb_loss = F.mse_loss(z_q, z_e.detach(), reduction="none").mean([1, 2])
         return cm_loss, cb_loss
+    
+
+    def penalty_loss(self, dists):
+        # dists (bsz, *, num_codewords)
+        similarity = F.softmax(-dists, dim=-1)
+        kl = - torch.sum(similarity * similarity.log(), dim=-1)  # [bsz, *]
+        return kl.mean([1])
 
 
     @torch.no_grad()
     def quantize(self, z_e):
+        z_e = self.prepare_inputs(z_e)
         dists = compute_dist(z_e, 
                              self.codebook, 
                              cos_dist=self.cos_dist, 
@@ -108,8 +91,41 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
         q = dists.min(dim=-1).indices
         return q
     
+
     @torch.no_grad()
-    def dequantize(self, q):
+    def dequantize(self, q, z_shape):
         z_q = F.embedding(q, self.codebook)
+        if hasattr(self, 'up_proj_matrix'):
+            z_q = self.up_proj_matrix(z_q)
+        z_q = self.recover_original(z_q, z_shape)
         return z_q
 
+
+    def _init_projection_layers(self, ):
+        if self.proj_dim is None:
+            self.z_proj_matrix = None
+            self.c_proj_matrix = None
+            return 
+        
+        if self.proj_dim != self.z_dim:
+            print("[VectorQuantize] Enabled latent factorization into low dimensional space ", end="")
+            z_proj_matrix = init_proj_matrix(self.random_proj, self.z_dim, self.proj_dim)
+            if self.random_proj:
+                self.register_buffer('z_proj_matrix', z_proj_matrix)
+                print("with random projection matrix")
+            else:
+                self.z_proj_matrix = z_proj_matrix
+                print("with learnable projection matrix")
+        
+        if self.proj_dim != self.embedding_dim:
+            print("[VectorQuantize] Enabled codebook factorization into low dimensional space ", end="")
+            c_proj_matrix = init_proj_matrix(self.random_proj, self.embedding_dim, self.proj_dim)
+            if self.random_proj:
+                self.register_buffer('c_proj_matrix', c_proj_matrix)
+                print("with random projection matrix")
+            else:
+                self.c_proj_matrix = c_proj_matrix
+                print("with learnable projection matrix")
+
+def ste(z, z_q):
+    return z + (z_q - z).detach()

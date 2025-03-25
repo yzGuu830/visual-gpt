@@ -7,7 +7,7 @@ from .trainer import Trainer
 from .models import load_model, NLayerDiscriminator
 from .losses import d_loss, g_loss
 
-from vector_quantize import freeze_vq_forward_hook
+from vector_quantize import freeze_dict_forward_hook
 from data import make_dl, make_inf_dl
 from utils import *
 
@@ -25,7 +25,7 @@ class TrainerAdv(Trainer):
 
         if self.conf.exp.pretrain_steps > 0:
             self.model.quantizer.register_buffer('is_freezed', torch.ones(1))
-            self.model.quantizer.register_forward_hook(freeze_vq_forward_hook)
+            self.model.quantizer.register_forward_hook(freeze_dict_forward_hook)
             print(f'pretraining autoencoder for {self.conf.exp.pretrain_steps} steps')
         else:
             self.model.quantizer.register_buffer('is_freezed', torch.zeros(1))
