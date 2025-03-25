@@ -41,11 +41,11 @@ def make_dl(data_name='mnist',
 
     elif data_name == 'imagenet': # res. 3 X 224 X 224 ; values 0 ~ 1
         transform = transforms.Compose([
-            transforms.Resize((128, 128)), 
+            transforms.Resize((256, 256)), 
             transforms.ToTensor(), 
             ])
-        train_ds = datasets.ImageNet(root='~/data/imagenet', split='train', download=True, transform=transform)
-        valid_ds = datasets.ImageNet(root='~/data/imagenet', split='val', download=True, transform=transform)
+        train_ds = ImageNet100(root='~/data/imagenet100', split='train', download=True, transform=transform)
+        valid_ds = ImageNet100(root='~/data/imagenet100', split='val', download=True, transform=transform)
 
     elif data_name == 'coco2017custom':
         transform = transforms.Compose([
@@ -70,6 +70,44 @@ def make_inf_dl(dataloader):
 
 
 from torch.utils.data import Dataset
+class ImageNet100(Dataset):
+    def __init__(self, root, split, transform=None):
+        super().__init__()
+        
+        labels_dict = json.load(open(os.path.join(Path(root).expanduser(), 'labels100.json'), "r"))
+        self.label_dict = self.preprocess_labels(labels_dict)
+        
+        self.transform = transform
+        self.root_dir = os.path.join(Path(root).expanduser(), split)
+        self.image_paths = glob.glob(os.path.join(self.root_dir, '*/*.JPEG'))
+
+    def __len__(self):
+        return len(self.image_paths)
+    
+    def preprocess_labels(self, labels_dict):
+        label_dict = {}
+        for k, v in labels_dict.items():
+            label_dict[k] = v[0] # only use the first label
+
+        self.classes = set([label for label in label_dict.values()])
+        classes2idx = {cls: idx for idx, cls in enumerate(self.classes)}
+        
+        for img_class_id, label in label_dict.items():
+            label_dict[img_class_id] = classes2idx.get(label)
+        return label_dict
+    
+    def __getitem__(self, idx):
+        image_path = self.image_paths[idx]
+        image = Image.open(image_path).convert("RGB")
+
+        if self.transform:
+            image = self.transform(image)
+
+        img_class_id = image_path.split("/")[-2]
+        label = torch.tensor([self.label_dict[img_class_id]], dtype=torch.long)
+        return image, label
+
+
 class Coco2017Custom(Dataset):
     classes = ['car', 'bird', 'cat', 'dog']
     def __init__(self, root, split, transform=None):
