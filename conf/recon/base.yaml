@@ -1,18 +1,23 @@
 data:
-  num_workers: 0
+  data_name: cifar10
+  dl_kwargs:
+    num_workers: 0
 
 
 model:
-  in_dim: 3 
-  dim_z: 256
-  num_scales: 2
-  blk_depth: 4
-  num_codewords: 1024
-  embedding_dim: 256
-  cos_dist: True
-  proj_dim: 8
-  random_proj: True
-  learnable_codebook: True
+  model_name: simple-ae
+  ae:
+    in_dim: 3 
+    dim_z: 256
+    num_scales: 2
+    blk_depth: 4
+  vq:
+    num_codewords: 1024
+    embedding_dim: 256
+    cos_dist: True
+    proj_dim: 8
+    random_proj: True
+    learnable_codebook: True
 
 
 exp:

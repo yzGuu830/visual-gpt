@@ -31,8 +31,13 @@ def dict2namespace(config: dict):
     return namespace
 
 
-def namespace2dict(config: argparse.Namespace):
-    return vars(config)
+def namespace2dict(config):
+    if isinstance(config, argparse.Namespace):
+        return {k: namespace2dict(v) for k, v in vars(config).items()}
+    elif isinstance(config, list):
+        return [namespace2dict(item) for item in config]
+    else:
+        return config
 
 
 def read_yaml(path):

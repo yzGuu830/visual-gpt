@@ -1,0 +1,36 @@
+data:
+  data_name: imagenet
+  dl_kwargs:
+    num_workers: 0
+
+
+model:
+  model_name: vqgan-ae
+  ae:
+    double_z: False
+    z_channels: 256
+    resolution: 256
+    in_channels: 3
+    out_ch: 3
+    ch: 128
+    ch_mult: [1,1,2,2,4]  # num_down = len(ch_mult)-1
+    num_res_blocks: 2
+    attn_resolutions: [16]
+    dropout: 0.0
+  vq:
+    num_codewords: 1024
+    embedding_dim: 256
+    cos_dist: True
+    proj_dim: 8
+    random_proj: True
+    learnable_codebook: True
+
+
+exp:
+  lr: 0.0001
+  bsz: 4
+  steps: 10000
+  pretrain_steps: 0
+  beta: 2.0
+  log_interval: 5
+  eval_interval: 1000

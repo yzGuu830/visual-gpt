@@ -1,4 +1,5 @@
 import wandb
+import json
 import torch.nn.functional as F
 from tqdm import tqdm
 
@@ -20,7 +21,7 @@ class Trainer:
 
     def load(self, ):
 
-        self.dls = make_dl(self.arg.data_name, self.conf.exp.bsz, self.conf.exp.bsz, **namespace2dict(self.conf.data))
+        self.dls = make_dl(self.conf.data.data_name, self.conf.exp.bsz, self.conf.exp.bsz, **namespace2dict(self.conf.data.dl_kwargs))
         
         self.model = load_model(self.conf.model)
         self.model.to(self.arg.device)
@@ -33,7 +34,7 @@ class Trainer:
             self.model.quantizer.register_buffer('is_freezed', torch.zeros(1))
 
         num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-        print(f'Model Loaded!\nModel # of Params: {num_params}')
+        print(f'Model Loaded!\nModel # of Params: {num_params/1e6}M')
 
         self.opt = torch.optim.Adam(self.model.parameters(), lr=self.conf.exp.lr)
         print(f'Optimizer: Adam\nLearning rate: {self.conf.exp.lr}\n')
@@ -67,7 +68,7 @@ class Trainer:
             pbar.update(1)
 
             if self.model.quantizer.is_freezed.item() == 0:
-                active_ratio = vq_out['q'].unique().numel() / self.conf.model.num_codewords
+                active_ratio = vq_out['q'].unique().numel() / self.conf.model.vq.num_codewords
             else:
                 active_ratio = 0
             desc = f'[Train step {pbar.n}/{self.conf.exp.steps}] total loss: {loss.item():.4f} | ' + \
@@ -102,7 +103,7 @@ class Trainer:
         self.model.eval()
         logs = {m:[] for m in METRIC_FUNCS.keys()} 
 
-        e_counter = VQCodebookCounter(codebook_size=self.conf.model.num_codewords, device=self.arg.device)
+        e_counter = VQCodebookCounter(codebook_size=self.conf.model.vq.num_codewords, device=self.arg.device)
         e_counter.reset_stats(1)
         for x, y in self.dls['val']: 
             x, y = x.to(self.arg.device), y.to(self.arg.device)

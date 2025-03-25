@@ -8,7 +8,6 @@ from recon.trainer_adv import TrainerAdv as ReconTrainerAdv
 
 def parse_args_confs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_name', type=str, default='cifar10')
     parser.add_argument('--save_path', type=str, default='../results/default_exp')
     parser.add_argument('--conf_path', type=str, default='conf/base.yaml')
     parser.add_argument('--adv_training', action='store_true')
@@ -44,22 +43,13 @@ if __name__ == "__main__":
 
 """
 python train_tokenizer.py \
-    --data_name cifar10 \
     --save_path ../outputs/resnetvq-cifar10 \
     --conf_path conf/recon/base.yaml \
     --wandb_project deepvq
 
 python train_tokenizer.py \
-    --data_name coco2017custom \
     --save_path ../outputs/resnetvq-coco17custom \
     --conf_path conf/recon/base_coco.yaml \
-    --wandb_project deepvq
-
-python train_tokenizer.py \
-    --data_name cifar10 \
-    --save_path ../outputs/resnetvq-cifar10-gan \
-    --conf_path conf/recon/base_adv.yaml \
-    --adv_training \
     --wandb_project deepvq
 
 """
