@@ -39,13 +39,13 @@ def make_dl(data_name='mnist',
         # valid_ds.attr = valid_ds.attr[:320]
         # print(train_ds[0][0].shape, train_ds[0][0].min(), train_ds[0][0].max())
 
-    elif data_name == 'imagenet': # res. 3 X 224 X 224 ; values 0 ~ 1
+    elif data_name == 'imagenet':
         transform = transforms.Compose([
-            transforms.Resize((256, 256)), 
+            transforms.Resize((128, 128)), 
             transforms.ToTensor(), 
             ])
-        train_ds = ImageNet100(root='~/data/imagenet100', split='train', download=True, transform=transform)
-        valid_ds = ImageNet100(root='~/data/imagenet100', split='val', download=True, transform=transform)
+        train_ds = ImageNet100(root='../data/imagenet100', split='train', transform=transform)
+        valid_ds = ImageNet100(root='../data/imagenet100', split='val', transform=transform)
 
     elif data_name == 'coco2017custom':
         transform = transforms.Compose([

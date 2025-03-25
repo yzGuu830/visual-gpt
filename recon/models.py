@@ -54,8 +54,8 @@ class VQResNet(nn.Module):
         self.decoder = DecoderResnet(**ae_conf)
 
         if factorized_dim is not None:
-            self.in_proj = nn.Linear(ae_conf['z_channels'], factorized_dim, bias=False)
-            self.out_proj = nn.Linear(factorized_dim, ae_conf['z_channels'], bias=False)
+            self.in_proj = nn.Linear(ae_conf['dim_z'], factorized_dim, bias=False)
+            self.out_proj = nn.Linear(factorized_dim, ae_conf['dim_z'], bias=False)
             print("factorized latents and codewords with dim = ", factorized_dim)
 
     def forward(self, x):

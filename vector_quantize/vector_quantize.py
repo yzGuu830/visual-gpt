@@ -16,6 +16,7 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
                  cos_dist: bool = False, # use normalized l2 distance
                  proj_dim: int = None, # low-dimensional search
                  random_proj: bool = False, # use random projection matrix
+                 replace_freq: int = 0, # reactivate dead codewords
                  penalty_weight: float = 0.0, # penalize non-uniform dists
                  **kwargs
                  ):
@@ -29,6 +30,10 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
         self._init_projection_layers()
 
         self.penalty_weight = penalty_weight
+
+        if replace_freq > 0:
+            lru_replacement(self, rho=0.01, timeout=replace_freq)
+            print("[VectorQuantize] Enabled LRU replacement with frequency ", replace_freq)
 
     def forward(self, z_e):
         """
