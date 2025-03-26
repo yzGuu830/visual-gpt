@@ -39,8 +39,9 @@ exp:
   bsz: 16
   steps: 80000
   pretrain_steps: 3000
-  beta: 1.0
+  beta: 2.0
   disc_weight: 0.8
+  disc_factor: 1.0
   disc_start: 10000
   p_weight: 1.0
   log_interval: 5

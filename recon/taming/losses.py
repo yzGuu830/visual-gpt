@@ -12,6 +12,17 @@ from collections import namedtuple
 from .utils import get_ckpt_path
 
 
+def calculate_adaptive_weight(nll_loss, g_loss, disc_weight=1.0, last_layer=None):
+    
+    nll_grads = torch.autograd.grad(nll_loss, last_layer, retain_graph=True)[0]
+    g_grads = torch.autograd.grad(g_loss, last_layer, retain_graph=True)[0]
+
+    d_weight = torch.norm(nll_grads) / (torch.norm(g_grads) + 1e-4)
+    d_weight = torch.clamp(d_weight, 0.0, 1e4).detach()
+    d_weight = d_weight * disc_weight
+    return d_weight
+
+
 def d_loss(logits_real, logits_fake, method='hinge'):
     if method == 'vanilla':
         d_loss = 0.5 * (

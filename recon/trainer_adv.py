@@ -8,7 +8,7 @@ from .trainer import Trainer
 
 from .models import load_model
 from .taming.modules import NLayerDiscriminator
-from .taming.losses import d_loss, g_loss, PerceptualLoss
+from .taming.losses import d_loss, g_loss, PerceptualLoss, calculate_adaptive_weight
 
 from vector_quantize import freeze_dict_forward_hook
 from data import make_dl, make_inf_dl
@@ -71,14 +71,17 @@ class TrainerAdv(Trainer):
             if hasattr(self, 'p_loss'):
                 p_loss = self.p_loss(x, x_hat).mean()
                 recon_loss += p_loss
-            
+
             vq_loss = self.conf.exp.beta * vq_out['cm_loss'].mean() + vq_out['cb_loss'].mean()
             loss = recon_loss + vq_loss
             
             if pbar.n >= self.disc_start:
                 logits_fake = self.discriminator(x_hat.contiguous())
                 gen_loss = g_loss(logits_fake)
-                loss += self.conf.exp.disc_weight * gen_loss
+                d_weight = calculate_adaptive_weight(recon_loss, gen_loss, self.conf.exp.disc_weight, 
+                                                     last_layer=self.model.decoder.conv_out.weight)
+
+                loss += d_weight * self.conf.exp.disc_factor * gen_loss
 
             self.opt.zero_grad()
             loss.backward()
@@ -88,7 +91,7 @@ class TrainerAdv(Trainer):
                 self.discriminator_opt.zero_grad()
                 logits_fake = self.discriminator(x_hat.contiguous().detach())
                 logits_real = self.discriminator(x.contiguous().detach())
-                disc_loss = self.conf.exp.disc_weight * d_loss(logits_real, logits_fake, method='hinge')
+                disc_loss = self.conf.exp.disc_factor * d_loss(logits_real, logits_fake, method='hinge')
                 disc_loss.backward()
                 self.discriminator_opt.step()
             
@@ -113,7 +116,7 @@ class TrainerAdv(Trainer):
             if wandb.run is not None and pbar.n % self.conf.exp.log_interval == 0: 
                 log_stats = {'loss': loss.item(), 'recon_loss': recon_loss.item(), 'vq_loss': vq_loss.item(), 'vq_active_ratio': active_ratio}
                 if pbar.n-1 >= self.disc_start:
-                    log_stats.update({'disc_loss': disc_loss.item(), 'gen_loss': gen_loss.item()})
+                    log_stats.update({'disc_loss': disc_loss.item(), 'gen_loss': gen_loss.item(), 'd_weight': d_weight.item()})
                 wandb.log(log_stats)
 
             if pbar.n > self.conf.exp.pretrain_steps and pbar.n % self.conf.exp.eval_interval == 0:
