@@ -89,6 +89,14 @@ class CUB200(Dataset):
                 image_id, image_name = line.strip().split()
                 self.id2path[int(image_id)] = image_name
 
+        self.path2id = {v: k for k, v in self.id2path.items()}
+
+        self.bboxes = {}
+        with open(self.root_dir / "bounding_boxes.txt", "r") as f:
+            for line in f:
+                image_id, x, y, w, h = map(float, line.strip().split())
+                self.bboxes[int(image_id)] = (x, y, w, h)
+
         self.image_paths = []
         with open(self.root_dir / "train_test_split.txt", "r") as f:
             for line in f:
@@ -109,6 +117,12 @@ class CUB200(Dataset):
         image_rel_path = self.image_paths[idx]
         image_path = self.root_dir / "images" / image_rel_path
         image = Image.open(image_path).convert("RGB")
+
+        image_id = self.path2id[image_rel_path]
+
+        x, y, w, h = self.bboxes[image_id]
+        left, upper, right, lower = int(x), int(y), int(x + w), int(y + h)
+        image = image.crop((left, upper, right, lower))
 
         if self.transform:
             image = self.transform(image)
