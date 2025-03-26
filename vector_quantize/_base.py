@@ -3,9 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
-
-
 class _BaseVectorQuantizeLayer(nn.Module):
 
     def __init__(self,
@@ -24,7 +21,7 @@ class _BaseVectorQuantizeLayer(nn.Module):
     def _init_codebook(self,):
 
         embed = torch.ones(self.num_codewords, self.embedding_dim)
-        nn.init.kaiming_normal_(embed) # TODO: need other initialization for not learnable codebook
+        nn.init.kaiming_normal_(embed)
         
         if self.learnable_codebook:
             self.codebook = nn.Parameter(embed, requires_grad=True)

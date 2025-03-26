@@ -1,14 +1,49 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-
 
 from ._base import _BaseVectorQuantizeLayer
 from ._utils import *
 
 
-
 class VectorQuantize(_BaseVectorQuantizeLayer):
+    """
+    A unified Vector Quantization module that supports various improved training/algorithmic approaches.
+
+    Parameters:
+        num_codewords (`int`):
+            The dictionary size of the codebook.
+        embedding_dim (`int`):
+            The dimension of the code-word vectors.
+        z_dim (`int`):
+            The dimension of the latent vectors.
+        cos_dist (`bool`, `optional`, defaults to `False`): 
+            Whether to use l2 normalized distance or not (Łancucki et al., 2020).
+        proj_dim (`int`, `optional`, defaults to `None`):
+            The dimension of the low-dimensional projection space.
+        random_proj (`bool`, `optional`, defaults to `False`):
+            Whether to use fixed random projection matrix or not (Chui et al., 2022).
+        replace_freq (`int`, `optional`, defaults to `0`):
+            Frequency to replace least recently used codewords (Implementation copied from Huh et al. (2023)).
+        penalty_weight (`float`, `optional`, defaults to `0.0`):
+            Weight to encourage uniform distance distributions. 
+
+    In addition, code-factorization (Yu et al., 2022) is supported within the autoencoder models. 
+    To enable pre-training autoencoders without vq layers, use `freeze_dict_forward_hook` (see recon/trainer.py)
+
+    Example:
+        ```python
+        >>> from vector_quantize import VectorQuantize
+        >>> vq_layer = VectorQuantize(num_codewords=512, embedding_dim=256, z_dim=256)
+        
+        >>> # training forward pass
+        >>> vq_out = vq_layer(z_e)
+
+        >>> # tokenizing & decoding
+        >>> vq_layer.eval()
+        >>> code = vq_layer.quantize(z_e)
+        >>> z_q = vq_layer.dequantize(code)
+        ```
+    """
     def __init__(self,
                  num_codewords: int,
                  embedding_dim: int,
