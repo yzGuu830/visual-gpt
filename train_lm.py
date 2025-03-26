@@ -8,11 +8,11 @@ from synthesis.trainer import Trainer
 def parse_args_confs():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tokenizer_path', type=str, default='../outputs/resnetvq-coco17custom')
-    parser.add_argument('--output_path', type=str, default='../outputs')
-    parser.add_argument('--exp_name', type=str, default='baseline', help='experiment name')
-    parser.add_argument('--conf_path', type=str, default='conf/generative/base.yaml')
-    parser.add_argument('--wandb_project', type=str, default=None)
+    parser.add_argument('--tokenizer_path', type=str, default='../outputs/resnetvq-cifar10', help='path to pretrained visual tokenizer')
+    parser.add_argument('--output_path', type=str, default='../outputs', help='output path')
+    parser.add_argument('--exp_name', type=str, default='baseline', help='wandb experiment name')
+    parser.add_argument('--conf_path', type=str, default='conf/generative/base.yaml', help='path to config file')
+    parser.add_argument('--wandb_project', type=str, default=None, help='wandb project name')
     parser.add_argument('--seed', type=int, default=53)
 
     args = parser.parse_args()    
@@ -24,6 +24,7 @@ def parse_args_confs():
 if __name__ == "__main__":
     args, confs = parse_args_confs()
     seed_everything(args.seed)
+
     if args.wandb_project is not None:
         wandb.login()
         wandb.init(project=args.wandb_project, name=args.exp_name)
@@ -35,10 +36,16 @@ if __name__ == "__main__":
 
 """
 python train_lm.py \
+    --tokenizer_path ../outputs/resnetvq-cifar10 \
+    --output_path ../outputs \
+    --conf_path conf/generative/base.yaml \
+    --exp_name gpt2-resnetvq-cifar10 \
+    --wandb_project deepvq
+
+python train_lm.py \
     --tokenizer_path ../outputs/vqgan-imagenet100 \
     --output_path ../outputs \
     --conf_path conf/generative/gpt2_vqgan.yaml \
     --exp_name gpt2-vqgan-imagenet100 \
-    --seed 53 \
     --wandb_project deepvq
 """

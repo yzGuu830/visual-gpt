@@ -12,7 +12,6 @@ transformer:
   num_transformer_layers: 12
   num_attn_heads: 12
 
-
 exp:
   bsz: 32
   lr: 0.000005
@@ -21,3 +20,4 @@ exp:
   scheduler: cosine
   warmup_steps: 10000
   eval_every: 10000
+  checkpoint_steps: [50000, 80000]
