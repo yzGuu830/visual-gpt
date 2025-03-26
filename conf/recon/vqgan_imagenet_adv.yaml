@@ -1,5 +1,5 @@
 data:
-  data_name: imagenet
+  data_name: cifar10
   dl_kwargs:
     num_workers: 16
   img_size: [128, 128]
@@ -15,7 +15,7 @@ model:
     in_channels: 3
     out_ch: 3
     ch: 128
-    ch_mult: [1,1,2,2,4]  # num_down = len(ch_mult)-1
+    ch_mult: [1,2,4]  # num_down = len(ch_mult)-1
     num_res_blocks: 2
     attn_resolutions: [8]
     dropout: 0.0
@@ -37,10 +37,11 @@ discriminator:
 exp:
   lr: 0.000045
   bsz: 16
-  steps: 50000
+  steps: 200000
   pretrain_steps: 0
   beta: 2.0
   disc_weight: 0.8
+  disc_start: 100000
   p_weight: 1.0
   log_interval: 5
   eval_interval: 2500

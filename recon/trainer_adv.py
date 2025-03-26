@@ -46,7 +46,7 @@ class TrainerAdv(Trainer):
         num_params = sum(p.numel() for p in self.discriminator.parameters() if p.requires_grad)
         print(f'Discriminator Loaded!\nDiscriminator # of Params: {num_params}')
         self.disc_start = self.conf.exp.disc_start if self.arg.pretrained_checkpoint is None else 0
-        
+        print(f'Discriminator training starts at step {self.disc_start}\n')
         if self.conf.exp.p_weight > 0:
             self.perceptual_loss = PerceptualLoss(self.arg.device, weight=self.conf.exp.p_weight)
         
@@ -69,12 +69,12 @@ class TrainerAdv(Trainer):
             recon_loss = F.l1_loss(x_hat, x)
             if hasattr(self, 'perceptual_loss'):
                 p_loss = self.perceptual_loss(x, x_hat)
-                recon_loss += p_loss
+                recon_loss += p_loss.mean()
             
             vq_loss = self.conf.exp.beta * vq_out['cm_loss'].mean() + vq_out['cb_loss'].mean()
             loss = recon_loss + vq_loss
             
-            if pbar.n >= self.conf.exp.disc_start:
+            if pbar.n >= self.disc_start:
                 logits_fake = self.discriminator(x_hat.contiguous())
                 gen_loss = g_loss(logits_fake)
                 loss += self.conf.exp.disc_weight * gen_loss
@@ -83,7 +83,7 @@ class TrainerAdv(Trainer):
             loss.backward()
             self.opt.step()
             
-            if pbar.n >= self.conf.exp.disc_start:
+            if pbar.n >= self.disc_start:
                 self.discriminator_opt.zero_grad()
                 logits_fake = self.discriminator(x_hat.contiguous().detach())
                 logits_real = self.discriminator(x.contiguous().detach())
@@ -95,23 +95,23 @@ class TrainerAdv(Trainer):
 
             
             if self.model.quantizer.is_freezed.item() == 0:
-                active_ratio = vq_out['q'].unique().numel() / self.conf.model.num_codewords
+                active_ratio = vq_out['q'].unique().numel() / self.conf.model.vq.num_codewords
             else:
                 active_ratio = 0
             desc = f'[Train step {pbar.n}/{self.conf.exp.steps}] total loss: {loss.item():.4f} | ' + \
                    f'recon (l1) loss: {recon_loss.item():.4f} | ' + \
                    f'vq loss: {vq_loss.item():.4f} | ' + \
                    f'vq active ratio: {active_ratio*100:.4f}%'
-            if pbar.n-1 >= self.conf.exp.disc_start:
+            if pbar.n-1 >= self.disc_start:
                 desc += f' | disc loss: {disc_loss.item():.4f} | gen loss: {gen_loss.item():.4f}'
             if hasattr(self, 'perceptual_loss'):
-                desc += f' | perceptual loss: {p_loss.item():.4f}'
+                desc += f' | perceptual loss: {p_loss.mean().item():.4f}'
             pbar.set_description(desc)
 
 
             if wandb.run is not None and pbar.n % self.conf.exp.log_interval == 0: 
                 log_stats = {'loss': loss.item(), 'recon_loss': recon_loss.item(), 'vq_loss': vq_loss.item(), 'vq_active_ratio': active_ratio}
-                if pbar.n-1 >= self.conf.exp.disc_start:
+                if pbar.n-1 >= self.disc_start:
                     log_stats.update({'disc_loss': disc_loss.item(), 'gen_loss': gen_loss.item()})
                 wandb.log(log_stats)
 

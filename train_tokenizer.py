@@ -60,7 +60,7 @@ python train_tokenizer.py \
 
 python train_tokenizer.py \
     --save_path ../outputs/vqgan-imagenet100 \
-    --conf_path conf/recon/vqgan_imagenet.yaml \
+    --conf_path conf/recon/vqgan_imagenet_adv.yaml \
     --pretrained_checkpoint ../outputs/vqgan-imagenet100/model.pth \
     --adv_training \
     --wandb_project deepvq
