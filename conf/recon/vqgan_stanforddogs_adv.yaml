@@ -1,0 +1,50 @@
+data:
+  data_name: stanforddogs
+  dl_kwargs:
+    num_workers: 16
+  img_size: [224, 224]
+
+
+model:
+  model_name: vqgan-ae
+  factorized_dim: null
+  ae:
+    double_z: False
+    z_channels: 256
+    resolution: 224
+    in_channels: 3
+    out_ch: 3
+    ch: 128
+    ch_mult: [1,1,2,2,4]  # num_down = len(ch_mult)-1
+    num_res_blocks: 2
+    attn_resolutions: [14]
+    dropout: 0.0
+  vq:
+    num_codewords: 1024
+    embedding_dim: 256
+    z_dim: 256
+    cos_dist: True
+    proj_dim: 8
+    random_proj: True
+    replace_freq: 20
+
+
+discriminator:
+  input_nc: 3 
+  ndf: 64 
+  n_layers: 3
+  
+
+exp:
+  lr: 0.0000045
+  bsz: 12
+  steps: 150000
+  pretrain_steps: 5000
+  beta: 2.0
+  disc_weight: 0.8
+  disc_factor: 1.0
+  disc_start: 50000
+  p_weight: 1.0
+  log_interval: 5
+  eval_interval: 5000
+  checkpoint_steps: [50000, 100000]
