@@ -6,7 +6,7 @@ from the official VQ-GAN taming transformers repo.
 import torch
 import torch.nn as nn
 import functools
-
+import numpy as np
 
 
 def nonlinearity(x):

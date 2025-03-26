@@ -50,7 +50,7 @@ def make_dl(data_name='mnist',
             transforms.ToTensor(), 
             ])
         train_ds = CUB200(root='../data/cub200/CUB_200_2011', split='train', transform=transform)
-        valid_ds = CUB200(root='../data/cub200/CUB_200_2011', split='test', transform=transform)
+        valid_ds = CUB200(root='../data/cub200/CUB_200_2011', split='val', transform=transform)
 
     elif data_name == 'coco2017custom':
         transform = transforms.Compose([
@@ -98,7 +98,7 @@ class CUB200(Dataset):
                 self.bboxes[int(image_id)] = (x, y, w, h)
 
         self.image_paths = []
-        with open(self.root_dir / "train_test_split.txt", "r") as f:
+        with open(self.root_dir / "custom_train_test_split.txt", "r") as f:
             for line in f:
                 image_id, is_train = map(int, line.strip().split())
                 if (split == 'train' and is_train) or (split == 'val' and not is_train):

@@ -69,7 +69,7 @@ class TrainerAdv(Trainer):
 
             recon_loss = F.l1_loss(x_hat, x)
             if hasattr(self, 'p_loss'):
-                p_loss = self.perceptual_loss(x, x_hat).mean()
+                p_loss = self.p_loss(x, x_hat).mean()
                 recon_loss += p_loss
             
             vq_loss = self.conf.exp.beta * vq_out['cm_loss'].mean() + vq_out['cb_loss'].mean()

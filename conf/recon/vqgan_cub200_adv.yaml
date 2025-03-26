@@ -37,11 +37,11 @@ discriminator:
 exp:
   lr: 0.0000045
   bsz: 16
-  steps: 100000
-  pretrain_steps: 5000
+  steps: 80000
+  pretrain_steps: 3000
   beta: 1.0
   disc_weight: 0.8
-  disc_start: 20000
+  disc_start: 10000
   p_weight: 1.0
   log_interval: 5
   eval_interval: 5000
