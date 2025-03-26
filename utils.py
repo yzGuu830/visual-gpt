@@ -46,14 +46,14 @@ def read_yaml(path):
     return config
 
 
-def save_checkpoint(model, save_path):
+def save_checkpoint(model, save_path, save_name='model.pth'):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    torch.save(model.state_dict(), save_path + '/model.pth')
+    torch.save(model.state_dict(), os.path.join(save_path, save_name))
 
 
 def load_checkpoint(model, load_path):
-    model.load_state_dict(torch.load(load_path), map_location='cpu')
+    model.load_state_dict(torch.load(load_path), map_location='cpu', strict=False, weights_only=True)
 
 
 def img_grid_show(data, disp_num=256, fig_size=(10,20), show=False, save=None):
@@ -68,58 +68,3 @@ def img_grid_show(data, disp_num=256, fig_size=(10,20), show=False, save=None):
     plt.tight_layout()
     if save is not None: plt.savefig(save)
     if show: plt.show()
-
-
-CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-COCO2017CUSTOM_LABELS = ['car', 'bird', 'cat', 'dog']
-IMAGENET100_LABELS = ["Great Dane", "coyote", "red fox", "wild boar", "vizsla", "komondor", "Doberman", "hare", "boxer", "tabby", "gibbon", "African hunting dog"]
-def vis_gens(imgs: torch.Tensor, iteration, save_path: str = None):
-    num_classes, num_samples = imgs.size(0), imgs.size(1)
-
-    # needs refactoring
-    if num_classes == len(CIFAR10_LABELS):
-        labels = CIFAR10_LABELS
-    elif num_classes == len(COCO2017CUSTOM_LABELS):
-        labels = COCO2017CUSTOM_LABELS
-    elif num_classes == len(IMAGENET100_LABELS):
-        labels = IMAGENET100_LABELS
-
-    fig, axes = plt.subplots(num_samples, num_classes, figsize=(num_classes, 10))
-    for j in range(num_classes):
-        if num_samples == 1:
-            axes[j].set_title(labels[j])
-        else:
-            axes[0, j].set_title(labels[j])
-        
-        for i in range(num_samples):
-            if num_samples == 1:
-                axes[j].imshow(imgs[j, i].cpu().numpy().transpose(1, 2, 0))
-                axes[j].axis('off')
-            else:
-                axes[i, j].imshow(imgs[j, i].cpu().numpy().transpose(1, 2, 0))
-                axes[i, j].axis('off')
-
-    plt.suptitle(f'LM Generated Imgs @ Iteration {iteration}')
-    plt.tight_layout()
-
-    if save_path is not None:
-        if not os.path.exists(save_path): os.makedirs(save_path)
-        fig.savefig(os.path.join(save_path, f'iteration_{iteration}.png'), bbox_inches='tight', dpi=120)
-    else:
-        plt.show()
-
-def save_stats(loss_curve: list, save_path: str):
-    if not os.path.exists(save_path): os.makedirs(save_path)
-    plt.figure(figsize=(10, 6))
-    plt.plot(loss_curve)
-    plt.xlabel('training step')
-    plt.ylabel('nll loss')
-    plt.grid()
-    plt.savefig(os.path.join(save_path, 'loss_curve.png'), bbox_inches='tight', dpi=120)
-    return
-
-def save_model(model, save_path: str):
-    if not os.path.exists(save_path): os.makedirs(save_path)
-    torch.save(model.lm.state_dict(), os.path.join(save_path, 'lm_checkpoint.pth'))
-    json.dump(model.config, open(os.path.join(save_path, 'config.json'), 'w'))
-    return

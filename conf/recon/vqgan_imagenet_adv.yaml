@@ -45,3 +45,4 @@ exp:
   p_weight: 1.0
   log_interval: 5
   eval_interval: 2500
+  checkpoint_steps: [50000, 75000]

@@ -4,14 +4,8 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt 
 import numpy as np
 
-from dataclasses import dataclass
-
 from skimage.metrics import peak_signal_noise_ratio
 from skimage.metrics import structural_similarity
-
-import hashlib
-import requests
-import tqdm
 
 
 class PSNR: 
@@ -33,51 +27,6 @@ METRIC_FUNCS = {
     'psnr': PSNR(),
     'ssim': SSIM(),
 }
-
-
-def plot_recons(raws: list, 
-                recons: list, 
-                tag: str, 
-                save_path: str = None):
-    """Plot raw and reconstructed images.
-    Args:
-        raws (list): list of raw images, each numpy array with shape (C, H, W)
-        recons (list): list of reconstructed images, each numpy array with shape (C, H, W)
-        tag (str): tag for the plot
-        save_path (str): path to save the plot
-    """
-
-    num_samples = len(raws)
-    assert num_samples % 2 == 0, "Batch size must be even to split into 4 rows"
-    
-    half_size = num_samples // 2  # To split into two groups
-    fig, axes = plt.subplots(4, half_size, figsize=(half_size * 2, 10))
-
-    # First two rows: Raw images
-    for i in range(half_size):
-        axes[0, i].imshow(raws[i].transpose(1, 2, 0))  # Row 1 (first half of raw images)
-        axes[0, i].axis('off')
-
-        axes[1, i].imshow(raws[half_size + i].transpose(1, 2, 0))  # Row 2 (second half of raw images)
-        axes[1, i].axis('off')
-
-    # Last two rows: Reconstructed images
-    for i in range(half_size):
-        axes[2, i].imshow(recons[i].transpose(1, 2, 0))  # Row 3 (first half of recons)
-        axes[2, i].axis('off')
-
-        axes[3, i].imshow(recons[half_size + i].transpose(1, 2, 0))  # Row 4 (second half of recons)
-        axes[3, i].axis('off')
-
-    plt.suptitle(tag)
-
-    if save_path is not None:
-        if not os.path.exists(save_path): 
-            os.makedirs(save_path)
-        fig.savefig(os.path.join(save_path, f'{tag}.png'), bbox_inches='tight', dpi=120)
-    else:
-        plt.show()
-
 
 
 class VQCodebookCounter:
@@ -174,19 +123,45 @@ class VQCodebookCounter:
         return round(sum(self.entropy.values())/self.max_total_entropy, 4), utilization
 
 
-def download(url, local_path, chunk_size=1024):
-    os.makedirs(os.path.split(local_path)[0], exist_ok=True)
-    with requests.get(url, stream=True) as r:
-        total_size = int(r.headers.get("content-length", 0))
-        with tqdm.tqdm(total=total_size, unit="B", unit_scale=True) as pbar:
-            with open(local_path, "wb") as f:
-                for data in r.iter_content(chunk_size=chunk_size):
-                    if data:
-                        f.write(data)
-                        pbar.update(chunk_size)
+def plot_recons(raws: list, 
+                recons: list, 
+                tag: str, 
+                save_path: str = None):
+    """Plot raw and reconstructed images.
+    Args:
+        raws (list): list of raw images, each numpy array with shape (C, H, W)
+        recons (list): list of reconstructed images, each numpy array with shape (C, H, W)
+        tag (str): tag for the plot
+        save_path (str): path to save the plot
+    """
+    raws = raws[:16] # plot at most 16 samples
+    recons = recons[:16] # plot at most 16 samples
 
+    num_samples = len(raws)
+    assert num_samples % 2 == 0, "Batch size must be divisible by 2"
+    
+    half_size = num_samples // 2  # To split into two groups
+    fig, axes = plt.subplots(4, half_size, figsize=(half_size * 2, 10))
 
-def md5_hash(path):
-    with open(path, "rb") as f:
-        content = f.read()
-    return hashlib.md5(content).hexdigest()
+    for i in range(half_size):
+        axes[0, i].imshow(raws[i].transpose(1, 2, 0))
+        axes[0, i].axis('off')
+
+        axes[1, i].imshow(raws[half_size + i].transpose(1, 2, 0))
+        axes[1, i].axis('off')
+
+    for i in range(half_size):
+        axes[2, i].imshow(recons[i].transpose(1, 2, 0))
+        axes[2, i].axis('off')
+
+        axes[3, i].imshow(recons[half_size + i].transpose(1, 2, 0))
+        axes[3, i].axis('off')
+
+    plt.suptitle(tag)
+
+    if save_path is not None:
+        if not os.path.exists(save_path): 
+            os.makedirs(save_path)
+        fig.savefig(os.path.join(save_path, f'{tag}.png'), bbox_inches='tight', dpi=120)
+    else:
+        plt.show()

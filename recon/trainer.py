@@ -1,15 +1,15 @@
 import wandb
 import json
+import os
 import torch.nn.functional as F
 from tqdm import tqdm
 
 from .models import load_model
-from .utils import *
+from .utils import plot_recons, METRIC_FUNCS, VQCodebookCounter
 
 from data import make_dl, make_inf_dl
-from utils import *
-
 from vector_quantize import freeze_dict_forward_hook
+from utils import *
 
 
 class Trainer:
@@ -40,13 +40,12 @@ class Trainer:
         print(f'Optimizer: Adam\nLearning rate: {self.conf.exp.lr}\n')
         return 
 
-
     def train(self, ):
         self.load()
         self.model.train()
 
         if not os.path.exists(self.arg.save_path): os.makedirs(self.arg.save_path)
-        json.dump(namespace2dict(self.conf.model), open(self.arg.save_path + '/config.json', 'w'), indent=4)
+        json.dump(namespace2dict(self.conf.model), open(os.path.join(self.arg.save_path, 'config.json'), 'w'), indent=4)
 
         pbar = tqdm(total=self.conf.exp.steps)
         dl = make_inf_dl(self.dls['train'])
@@ -69,26 +68,28 @@ class Trainer:
                 active_ratio = vq_out['q'].unique().numel() / self.conf.model.vq.num_codewords
             else:
                 active_ratio = 0
-            desc = f'[Train step {pbar.n}/{self.conf.exp.steps}] total loss: {loss.item():.4f} | ' + \
+            desc = f'[Training step {pbar.n}/{self.conf.exp.steps}] total loss: {loss.item():.4f} | ' + \
                    f'recon loss: {recon_loss.item():.4f} | ' + \
                    f'vq loss: {vq_loss.item():.4f} | ' + \
                    f'vq active ratio: {active_ratio*100:.4f}%'
             pbar.set_description(desc)
-            # f.write(desc + '\n')
 
             if wandb.run is not None and pbar.n % self.conf.exp.log_interval == 0: 
                 log_stats = {'loss': loss.item(), 'recon_loss': recon_loss.item(), 'vq_loss': vq_loss.item(), 'vq_active_ratio': active_ratio}
                 wandb.log(log_stats)
 
             if pbar.n > self.conf.exp.pretrain_steps and pbar.n % self.conf.exp.eval_interval == 0:
-                print(f'[Test step {pbar.n+1}/{self.conf.exp.steps}]... ', end='', file=f)
+                print(f'[Validation step {pbar.n+1}/{self.conf.exp.steps}]... ')
                 self.eval_epoch(tag=f'training-step-{pbar.n}')
                 self.model.train()
 
+            if pbar.n in self.conf.exp.checkpoint_steps:
+                save_checkpoint(self.model, self.arg.save_path, f'model-ckpt-step-{pbar.n}.pth')
+
             if pbar.n == self.conf.exp.steps:
-                print("Training finished. Testing on validation set...\n--Final results--", file=f)
+                print("Training finished. Testing on validation set...\n--Final results--")
                 self.eval_epoch(tag='final')
-                save_checkpoint(self.model, self.arg.save_path)
+                save_checkpoint(self.model, self.arg.save_path, 'model.pth')
                 return
             
             if pbar.n == self.conf.exp.pretrain_steps:
@@ -97,7 +98,7 @@ class Trainer:
             
             
     @torch.no_grad()
-    def eval_epoch(self, tag='', f=None):
+    def eval_epoch(self, tag=''):
         self.model.eval()
         logs = {m:[] for m in METRIC_FUNCS.keys()} 
 
@@ -115,7 +116,6 @@ class Trainer:
             for i in range(x_np.shape[0]):
                 for m, fn in METRIC_FUNCS.items():
                     logs[m].append(fn(x_np[i], x_hat_np[i]))
-            break
 
         plot_recons(x_np, x_hat_np, tag, self.arg.save_path)
 
@@ -123,7 +123,6 @@ class Trainer:
             logs[m] = sum(vals) / len(vals)
         util_ratio, _ = e_counter.compute_utilization()
         logs['util_ratio'] = util_ratio*100
-        print(' | '.join([f'{k}: {v:.5f}' for k, v in logs.items()]), file=f)
-        
+        print(' | '.join([f'{k}: {v:.5f}' for k, v in logs.items()]))
         if wandb.run is not None:
             wandb.log(logs)

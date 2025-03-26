@@ -2,10 +2,12 @@ data:
   data_name: cifar10
   dl_kwargs:
     num_workers: 0
+  img_size: [32, 32]
 
 
 model:
   model_name: simple-ae
+  factorized_dim: null
   ae:
     in_dim: 3 
     dim_z: 256
@@ -17,8 +19,6 @@ model:
     cos_dist: True
     proj_dim: 8
     random_proj: True
-    learnable_codebook: True
-
 
 exp:
   lr: 0.0001
@@ -28,3 +28,4 @@ exp:
   beta: 2.0
   log_interval: 5
   eval_interval: 1000
+  checkpoint_steps: [5000, 7500]

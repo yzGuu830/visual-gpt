@@ -1,16 +1,18 @@
-"""Copied from https://github.com/CompVis/taming-transformers"""
-
+""" 
+Adversarial Loss Formulations https://github.com/CompVis/taming-transformers/blob/master/taming/modules/losses/vqperceptual.py#L20-L31
+and Perceptual Loss https://github.com/CompVis/taming-transformers/blob/master/taming/modules/losses/lpips.py
+from the official VQ-GAN taming transformers repo.
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import os
 from torchvision import models
 from collections import namedtuple
-from .utils import md5_hash, download
+from .utils import get_ckpt_path
 
 
-def d_loss(logits_real, logits_fake, method='vanilla'):
+def d_loss(logits_real, logits_fake, method='hinge'):
     if method == 'vanilla':
         d_loss = 0.5 * (
             torch.mean(torch.nn.functional.softplus(-logits_real)) +
@@ -26,7 +28,7 @@ def d_loss(logits_real, logits_fake, method='vanilla'):
 
 
 def g_loss(logits_fake):
-    g_loss = -torch.mean(logits_fake)
+    g_loss = - torch.mean(logits_fake)
     return g_loss
 
 
@@ -34,13 +36,12 @@ class PerceptualLoss:
     def __init__(self, device, weight=1.0):
         self.model = LPIPS().to(device)
         self.model.eval()
-
         self.weight = weight
 
     def __call__(self, x, x_hat):
-        
         p_loss = self.model(x, x_hat)
         return p_loss*self.weight
+
 
 
 class LPIPS(nn.Module):
@@ -157,24 +158,3 @@ def spatial_average(x, keepdim=True):
     return x.mean([2,3],keepdim=keepdim)
 
 
-URL_MAP = {
-    "vgg_lpips": "https://heibox.uni-heidelberg.de/f/607503859c864bc1b30b/?dl=1"
-}
-
-CKPT_MAP = {
-    "vgg_lpips": "vgg.pth"
-}
-
-MD5_MAP = {
-    "vgg_lpips": "d507d7349b931f0638a25a48a722f98a"
-}
-
-def get_ckpt_path(name, root, check=False):
-    assert name in URL_MAP
-    path = os.path.join(root, CKPT_MAP[name])
-    if not os.path.exists(path) or (check and not md5_hash(path) == MD5_MAP[name]):
-        print("Downloading {} model from {} to {}".format(name, URL_MAP[name], path))
-        download(URL_MAP[name], path)
-        md5 = md5_hash(path)
-        assert md5 == MD5_MAP[name], md5
-    return path
