@@ -20,7 +20,7 @@ class Trainer:
         self.conf = conf
 
     def load(self, ):
-
+        
         self.dls = make_dl(self.conf.data.data_name, self.conf.exp.bsz, self.conf.exp.bsz, self.conf.data.img_size, **vars(self.conf.data.dl_kwargs))
         
         self.model = load_model(self.conf.model)
@@ -36,7 +36,7 @@ class Trainer:
         num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(f'Model Loaded!\nModel # of Params: {num_params/1e6}M')
 
-        self.opt = torch.optim.Adam(self.model.parameters(), lr=self.conf.exp.lr)
+        self.opt = torch.optim.Adam(self.model.parameters(), lr=self.conf.exp.lr, betas=(0.5, 0.9))
         print(f'Optimizer: Adam\nLearning rate: {self.conf.exp.lr}\n')
         return 
 

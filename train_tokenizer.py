@@ -10,6 +10,7 @@ def parse_args_confs():
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_path', type=str, default='../results/default_exp')
     parser.add_argument('--conf_path', type=str, default='conf/base.yaml')
+    parser.add_argument('--pretrained_checkpoint', type=str, default=None)
     parser.add_argument('--adv_training', action='store_true')
     parser.add_argument('--wandb_project', type=str, default=None)
     parser.add_argument('--seed', type=int, default=53)
@@ -52,4 +53,15 @@ python train_tokenizer.py \
     --conf_path conf/recon/base_coco.yaml \
     --wandb_project deepvq
 
+python train_tokenizer.py \
+    --save_path ../outputs/vqgan-imagenet100 \
+    --conf_path conf/recon/vqgan_imagenet.yaml \
+    --wandb_project deepvq
+
+python train_tokenizer.py \
+    --save_path ../outputs/vqgan-imagenet100 \
+    --conf_path conf/recon/vqgan_imagenet.yaml \
+    --pretrained_checkpoint ../outputs/vqgan-imagenet100/model.pth \
+    --adv_training \
+    --wandb_project deepvq
 """

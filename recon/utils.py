@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from skimage.metrics import peak_signal_noise_ratio
 from skimage.metrics import structural_similarity
 
+import hashlib
+import requests
+import tqdm
+
 
 class PSNR: 
     def __init__(self):
@@ -168,3 +172,21 @@ class VQCodebookCounter:
             utilization[k] = round(e/self.max_entropy_per_book, 4)
 
         return round(sum(self.entropy.values())/self.max_total_entropy, 4), utilization
+
+
+def download(url, local_path, chunk_size=1024):
+    os.makedirs(os.path.split(local_path)[0], exist_ok=True)
+    with requests.get(url, stream=True) as r:
+        total_size = int(r.headers.get("content-length", 0))
+        with tqdm.tqdm(total=total_size, unit="B", unit_scale=True) as pbar:
+            with open(local_path, "wb") as f:
+                for data in r.iter_content(chunk_size=chunk_size):
+                    if data:
+                        f.write(data)
+                        pbar.update(chunk_size)
+
+
+def md5_hash(path):
+    with open(path, "rb") as f:
+        content = f.read()
+    return hashlib.md5(content).hexdigest()
