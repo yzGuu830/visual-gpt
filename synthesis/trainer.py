@@ -80,7 +80,7 @@ class Trainer:
         
         self.model.lm.eval()
         gens = []
-        for i in range(self.conf.transformer.num_classes[:12]):
+        for i in range(min(self.conf.transformer.num_classes, 12)):
             cond = torch.full((num_gen_imgs, 1), i, dtype=torch.long, device=device)
             x_hat, _ = self.model.sample(cond, latent_size=tuple(self.conf.latent_size), do_sample=do_sample, temperature=1.0)
             gens.append(x_hat)
