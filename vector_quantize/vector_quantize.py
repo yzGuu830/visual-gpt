@@ -88,7 +88,6 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
 
     @torch.no_grad()
     def quantize(self, z_e):
-        z_e = self.prepare_inputs(z_e)
         dists = compute_dist(z_e, 
                              self.codebook, 
                              cos_dist=self.cos_dist, 
@@ -98,11 +97,8 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
     
 
     @torch.no_grad()
-    def dequantize(self, q, z_shape):
+    def dequantize(self, q):
         z_q = F.embedding(q, self.codebook)
-        if hasattr(self, 'up_proj_matrix'):
-            z_q = self.up_proj_matrix(z_q)
-        z_q = self.recover_original(z_q, z_shape)
         return z_q
 
 
