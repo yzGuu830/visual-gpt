@@ -125,8 +125,9 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
     def quantize(self, z_e):
         dists = compute_dist(z_e, 
                              self.codebook, 
-                             cos_dist=self.cos_dist, 
-                             proj_matrix=self.proj_matrix)
+                             cos_dist=self.cos_dist,
+                             z_proj_matrix=self.z_proj_matrix,
+                             c_proj_matrix=self.c_proj_matrix)
         q = dists.min(dim=-1).indices
         return q
     

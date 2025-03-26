@@ -30,6 +30,8 @@ class VisualTokenizer(nn.Module):
         z_e = self.model.encoder(x)
         b, c, h, w = z_e.shape
         z_e = z_e.permute(0, 2, 3, 1).view(b, -1, c)
+        if hasattr(self.model, 'in_proj'):
+            z_e = self.model.in_proj(z_e)
         code = self.model.quantizer.quantize(z_e)
         return code # (bsz, hw)
     
@@ -37,6 +39,8 @@ class VisualTokenizer(nn.Module):
     def decode(self, code):
         # code (bsz, h, w)
         z_q = self.model.quantizer.dequantize(code)
+        if hasattr(self.model, 'out_proj'):
+            z_q = self.model.out_proj(z_q)
         z_q = z_q.permute(0, 3, 1, 2)
         x_hat = self.model.decoder(z_q)
         return x_hat
