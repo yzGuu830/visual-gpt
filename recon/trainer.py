@@ -21,7 +21,7 @@ class Trainer:
 
     def load(self, ):
 
-        self.dls = make_dl(self.conf.data.data_name, self.conf.exp.bsz, self.conf.exp.bsz, **namespace2dict(self.conf.data.dl_kwargs))
+        self.dls = make_dl(self.conf.data.data_name, self.conf.exp.bsz, self.conf.exp.bsz, self.conf.data.img_size, **vars(self.conf.data.dl_kwargs))
         
         self.model = load_model(self.conf.model)
         self.model.to(self.arg.device)
@@ -47,8 +47,6 @@ class Trainer:
 
         if not os.path.exists(self.arg.save_path): os.makedirs(self.arg.save_path)
         json.dump(namespace2dict(self.conf.model), open(self.arg.save_path + '/config.json', 'w'), indent=4)
-        # f = open(self.arg.save_path + '/log.txt', 'w')
-        f = None
 
         pbar = tqdm(total=self.conf.exp.steps)
         dl = make_inf_dl(self.dls['train'])
@@ -84,12 +82,12 @@ class Trainer:
 
             if pbar.n > self.conf.exp.pretrain_steps and pbar.n % self.conf.exp.eval_interval == 0:
                 print(f'[Test step {pbar.n+1}/{self.conf.exp.steps}]... ', end='', file=f)
-                self.eval_epoch(tag=f'training-step-{pbar.n}', f=f)
+                self.eval_epoch(tag=f'training-step-{pbar.n}')
                 self.model.train()
 
             if pbar.n == self.conf.exp.steps:
                 print("Training finished. Testing on validation set...\n--Final results--", file=f)
-                self.eval_epoch(tag='final', f=f)
+                self.eval_epoch(tag='final')
                 save_checkpoint(self.model, self.arg.save_path)
                 return
             

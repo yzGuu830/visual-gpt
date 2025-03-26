@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 def make_dl(data_name='mnist', 
             train_bsz=256, 
             val_bsz=256,
+            img_size=(64, 64),
             **dl_kwargs):
     
     if data_name == 'mnist': # res. 1 X 28 X 28 ; values 0 ~ 1
@@ -41,7 +42,7 @@ def make_dl(data_name='mnist',
 
     elif data_name == 'imagenet':
         transform = transforms.Compose([
-            transforms.Resize((128, 128)), 
+            transforms.Resize((img_size[0], img_size[1])), 
             transforms.ToTensor(), 
             ])
         train_ds = ImageNet100(root='../data/imagenet100', split='train', transform=transform)

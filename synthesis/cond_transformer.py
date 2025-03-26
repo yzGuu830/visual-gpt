@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
+import os
 
 import math
+import json
 
 from transformers.models.gpt2.modeling_gpt2 import GPT2LMHeadModel
 from transformers.models.gpt2.configuration_gpt2 import GPT2Config
@@ -39,6 +41,19 @@ class CondTransformer(nn.Module):
             'num_transformer_layers': num_transformer_layers,
             'num_attn_heads': num_attn_heads,
         }
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path: str="Imagenet100-VQCondTransformer"):
+
+        visual_tokenizer = VisualTokenizer.from_pretrained(os.path.join(pretrained_model_name_or_path, "tokenizer"))
+        
+        t_config = json.load(open(os.path.join(pretrained_model_name_or_path, 'gpt2', 'config.json'), "r"))
+        cond_transformer = cls(visual_tokenizer, **t_config)
+        cond_transformer.lm.load_state_dict(
+            torch.load(os.path.join(pretrained_model_name_or_path, 'gpt2', 'model.pth'), map_location="cpu", weights_only=True), strict=False)
+        
+        print("visual autoregressive transformer loaded from pretrained!")
+        return cond_transformer
     
     def forward(self, x, cond=None):
         """

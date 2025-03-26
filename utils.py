@@ -72,14 +72,17 @@ def img_grid_show(data, disp_num=256, fig_size=(10,20), show=False, save=None):
 
 CIFAR10_LABELS = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 COCO2017CUSTOM_LABELS = ['car', 'bird', 'cat', 'dog']
+IMAGENET100_LABELS = ["Great Dane", "coyote", "red fox", "wild boar", "vizsla", "komondor", "Doberman", "hare", "boxer", "tabby", "gibbon", "African hunting dog"]
 def vis_gens(imgs: torch.Tensor, iteration, save_path: str = None):
     num_classes, num_samples = imgs.size(0), imgs.size(1)
 
-    # this needs refactoring
+    # needs refactoring
     if num_classes == len(CIFAR10_LABELS):
         labels = CIFAR10_LABELS
     elif num_classes == len(COCO2017CUSTOM_LABELS):
         labels = COCO2017CUSTOM_LABELS
+    elif num_classes == len(IMAGENET100_LABELS):
+        labels = IMAGENET100_LABELS
 
     fig, axes = plt.subplots(num_samples, num_classes, figsize=(num_classes, 10))
     for j in range(num_classes):

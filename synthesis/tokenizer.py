@@ -1,7 +1,7 @@
 import torch, json
 import torch.nn as nn
 
-from recon.models import VQResNet
+from recon.models import VQResNet, VQGANModel
 
 
 class VisualTokenizer(nn.Module):
@@ -12,7 +12,10 @@ class VisualTokenizer(nn.Module):
     def from_pretrained(cls, pretrained_model_name_or_path: str="vq_resnet"):
         
         config = json.load(open(f"{pretrained_model_name_or_path}/config.json", "r"))
-        model = VQResNet(**config)
+        if config['model_name'] == "vqgan-ae":
+            model = VQGANModel(config['ae'], config['factorized_dim'], **config['vq'])
+        elif config['model_name'] == "simple-ae":
+            model = VQResNet(config['ae'], config['factorized_dim'], **config['vq'])
         model.load_state_dict(torch.load(f"{pretrained_model_name_or_path}/model.pth", map_location="cpu", weights_only=True), strict=False)
         print("visual tokenizer loaded from pretrained!")
         
