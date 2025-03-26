@@ -35,10 +35,6 @@ def make_dl(data_name='mnist',
             ])
         train_ds = datasets.CelebA(root='~/data/celeba', split='train', download=True, transform=transform)
         valid_ds = datasets.CelebA(root='~/data/celeba', split='valid', download=True, transform=transform)
-        
-        # valid_ds.filename = valid_ds.filename[:320]
-        # valid_ds.attr = valid_ds.attr[:320]
-        # print(train_ds[0][0].shape, train_ds[0][0].min(), train_ds[0][0].max())
 
     elif data_name == 'imagenet':
         transform = transforms.Compose([
@@ -47,6 +43,14 @@ def make_dl(data_name='mnist',
             ])
         train_ds = ImageNet100(root='../data/imagenet100', split='train', transform=transform)
         valid_ds = ImageNet100(root='../data/imagenet100', split='val', transform=transform)
+    
+    elif data_name == 'cub200':
+        transform = transforms.Compose([
+            transforms.Resize((img_size[0], img_size[1])), 
+            transforms.ToTensor(), 
+            ])
+        train_ds = CUB200(root='../data/cub200/CUB_200_2011', split='train', transform=transform)
+        valid_ds = CUB200(root='../data/cub200/CUB_200_2011', split='test', transform=transform)
 
     elif data_name == 'coco2017custom':
         transform = transforms.Compose([
@@ -71,6 +75,49 @@ def make_inf_dl(dataloader):
 
 
 from torch.utils.data import Dataset
+
+class CUB200(Dataset):
+    def __init__(self, root, split='train', transform=None):
+        super().__init__()
+        self.root_dir = Path(root).expanduser()
+        self.transform = transform
+        self.split = split
+
+        self.id2path = {}
+        with open(self.root_dir / "images.txt", "r") as f:
+            for line in f:
+                image_id, image_name = line.strip().split()
+                self.id2path[int(image_id)] = image_name
+
+        self.image_paths = []
+        with open(self.root_dir / "train_test_split.txt", "r") as f:
+            for line in f:
+                image_id, is_train = map(int, line.strip().split())
+                if (split == 'train' and is_train) or (split == 'val' and not is_train):
+                    self.image_paths.append(self.id2path[image_id])
+
+        self.class2idx = {}
+        with open(self.root_dir / "classes.txt", "r") as f:
+            for line in f:
+                idx, cls_name = line.strip().split()
+                self.class2idx[cls_name] = int(idx)
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        image_rel_path = self.image_paths[idx]
+        image_path = self.root_dir / "images" / image_rel_path
+        image = Image.open(image_path).convert("RGB")
+
+        if self.transform:
+            image = self.transform(image)
+
+        class_name = image_rel_path.split("/")[0]
+        label = torch.tensor([self.class2idx[class_name]], dtype=torch.long)
+        return image, label
+
+
 class ImageNet100(Dataset):
     def __init__(self, root, split, transform=None):
         super().__init__()
