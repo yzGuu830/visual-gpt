@@ -144,17 +144,17 @@ def plot_recons(raws: list,
     fig, axes = plt.subplots(4, half_size, figsize=(half_size * 2, 10))
 
     for i in range(half_size):
-        axes[0, i].imshow(raws[i].transpose(1, 2, 0))
+        axes[0, i].imshow(np.clip(raws[i].transpose(1, 2, 0), 0.0, 1.0))
         axes[0, i].axis('off')
 
-        axes[1, i].imshow(raws[half_size + i].transpose(1, 2, 0))
+        axes[1, i].imshow(np.clip(raws[half_size + i].transpose(1, 2, 0), 0.0, 1.0))
         axes[1, i].axis('off')
 
     for i in range(half_size):
-        axes[2, i].imshow(recons[i].transpose(1, 2, 0))
+        axes[2, i].imshow(np.clip(recons[i].transpose(1, 2, 0), 0.0, 1.0))
         axes[2, i].axis('off')
 
-        axes[3, i].imshow(recons[half_size + i].transpose(1, 2, 0))
+        axes[3, i].imshow(np.clip(recons[half_size + i].transpose(1, 2, 0), 0.0, 1.0))
         axes[3, i].axis('off')
 
     plt.suptitle(tag)

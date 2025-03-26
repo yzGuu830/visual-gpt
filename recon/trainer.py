@@ -104,7 +104,7 @@ class Trainer:
 
         e_counter = VQCodebookCounter(codebook_size=self.conf.model.vq.num_codewords, device=self.arg.device)
         e_counter.reset_stats(1)
-        for x, y in self.dls['val']: 
+        for idx, (x, y) in enumerate(self.dls['val']): 
             x, y = x.to(self.arg.device), y.to(self.arg.device)
 
             x_hat, vq_out = self.model(x)
@@ -113,11 +113,14 @@ class Trainer:
             x_np = x.cpu().numpy()
             x_hat_np = x_hat.cpu().numpy()
 
+            if idx == 0:
+                x_np_plot, x_hat_np_plot = x_np.copy(), x_hat_np.copy()
+
             for i in range(x_np.shape[0]):
                 for m, fn in METRIC_FUNCS.items():
                     logs[m].append(fn(x_np[i], x_hat_np[i]))
 
-        plot_recons(x_np, x_hat_np, tag, self.arg.save_path)
+        plot_recons(x_np_plot, x_hat_np_plot, tag, self.arg.save_path)
 
         for m, vals in logs.items():
             logs[m] = sum(vals) / len(vals)
