@@ -104,6 +104,7 @@ class Trainer:
 
         e_counter = VQCodebookCounter(codebook_size=self.conf.model.vq.num_codewords, device=self.arg.device)
         e_counter.reset_stats(1)
+        plt_batch = np.random.randint(len(self.dls['val'])-1)
         for idx, (x, y) in enumerate(self.dls['val']): 
             x, y = x.to(self.arg.device), y.to(self.arg.device)
 
@@ -113,7 +114,7 @@ class Trainer:
             x_np = x.cpu().numpy()
             x_hat_np = x_hat.cpu().numpy()
 
-            if idx == 0:
+            if idx == plt_batch:
                 x_np_plot, x_hat_np_plot = x_np.copy(), x_hat_np.copy()
 
             for i in range(x_np.shape[0]):

@@ -71,7 +71,7 @@ class Trainer:
             
             if pbar.n % self.conf.exp.eval_every == 0 or pbar.n == self.conf.exp.train_steps:
                 gens = self.eval_epoch(do_sample=True, device=self.arg.device)
-                vis_gens(gens, tag=f"LM Generated Imgs @ Iteration {pbar.n+1}", save_path=self.arg.save_path)
+                vis_gens(gens, tag=f"LM_Generated_Imgs@Iteration{pbar.n+1}", save_path=self.arg.save_path)
                 if pbar.n == self.conf.exp.train_steps: 
                     save_checkpoint(self.model.lm, self.arg.save_path, f'model.pth')
                     return

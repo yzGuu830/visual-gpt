@@ -8,6 +8,7 @@ import json
 from transformers.models.gpt2.modeling_gpt2 import GPT2LMHeadModel
 from transformers.models.gpt2.configuration_gpt2 import GPT2Config
 
+from .tokenizer import VisualTokenizer
 
 class CondTransformer(nn.Module):
     def __init__(self, 
@@ -143,7 +144,6 @@ class CondTransformer(nn.Module):
 
 if __name__ == "__main__":
 
-    from tokenizer import VisualTokenizer
     tokenizer = VisualTokenizer.from_pretrained("results/resnet_cifar10_large")
 
     model = CondTransformer(
