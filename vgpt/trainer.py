@@ -40,7 +40,7 @@ class ReconTrainer:
         self.opt = torch.optim.Adam(self.model.parameters(), lr=self.exp_conf.lr, betas=(beta1, beta2))
         print(f'Adam optimizer loaded with learning rate {self.exp_conf.lr} and betas ({beta1}, {beta2})\n')
 
-        self.recon_loss_fn = ReconLoss(method='l1' if self.disc_conf is None else 'l2')
+        self.recon_loss_fn = ReconLoss(method='l2' if self.disc_conf is None else 'l1')
 
         if self.disc_conf is not None:
             self.discriminator = NLayerDiscriminator(**namespace2dict(self.disc_conf))

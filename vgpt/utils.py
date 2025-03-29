@@ -82,7 +82,7 @@ def plot_generations(imgs: dict, tag: str, save_path: str = None):
         plt.show()
 
 
-def img_normalize(img, eps=1e6):
+def img_normalize(img, eps=1e-6):
     return (img - img.min()) / (img.max() - img.min() + eps)
 
 
