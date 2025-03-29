@@ -1,11 +1,14 @@
 import os
 import torch
-import urllib.request
+import random
 import tarfile
+import json
+import urllib.request
 import xml.etree.ElementTree as ET
+
 from PIL import Image
 from torch.utils.data import Dataset
-import random
+
 
 class StanfordDogs(Dataset):
     def __init__(self, root, split='train', transform=None, download=True):
@@ -21,8 +24,50 @@ class StanfordDogs(Dataset):
         images_dir = os.path.join(self.dataset_dir, 'Images')
         self.classes = sorted(os.listdir(images_dir))
         self.class_to_idx = {cls: idx for idx, cls in enumerate(self.classes)}
+        if not os.path.exists(os.path.join(self.dataset_dir, "class2idx.json")):
+            json.dump(self.class_to_idx, open(os.path.join(self.dataset_dir, "class2idx.json"), 'w'), indent=4)
         
         self.data = self._load_data()
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        img_path, label = self.data[index]
+        image = Image.open(img_path).convert('RGB')
+        annotation_path = self._get_annotation_path(img_path)
+        if os.path.exists(annotation_path):
+            bbox = self._parse_annotation(annotation_path)
+            if bbox is not None:
+                image = image.crop(bbox)
+        
+        if self.transform is not None:
+            image = self.transform(image)
+        
+        return image, torch.tensor([label], dtype=torch.long)
+    
+    def _load_data(self):
+        data = []
+        split_file = os.path.join(self.dataset_dir, f'{self.split}_list.txt')
+
+        if not os.path.exists(split_file):
+            self._create_train_val_split()
+            print("Created train_list.txt and val_list.txt split files for the first time")
+
+        if os.path.exists(split_file):
+            with open(split_file, 'r') as f:
+                lines = f.readlines()
+            for line in lines:
+                line = line.strip()
+                # Expected format: "Images/<breed>/<filename>.jpg"
+                img_path = os.path.join(self.dataset_dir, line)
+                breed = os.path.basename(os.path.dirname(img_path))
+                label = self.class_to_idx[breed]
+                data.append((img_path, label))
+        else:
+            raise FileNotFoundError(f"Split file {split_file} not found")
+        
+        return data
     
     def _download_data(self):
         if not os.path.exists(self.dataset_dir):
@@ -53,30 +98,6 @@ class StanfordDogs(Dataset):
             print("Stanford Dogs dataset downloaded and extracted.")
         else:
             print("Stanford Dogs dataset already exists.")
-            
-    def _load_data(self):
-        data = []
-        images_dir = os.path.join(self.dataset_dir, 'Images')
-        split_file = os.path.join(self.dataset_dir, f'{self.split}_list.txt')
-
-        if not os.path.exists(split_file):
-            self._create_train_val_split()
-            print("Created train_list.txt and val_list.txt split files for the first time")
-
-        if os.path.exists(split_file):
-            with open(split_file, 'r') as f:
-                lines = f.readlines()
-            for line in lines:
-                line = line.strip()
-                # Expected format: "Images/<breed>/<filename>.jpg"
-                img_path = os.path.join(self.dataset_dir, line)
-                breed = os.path.basename(os.path.dirname(img_path))
-                label = self.class_to_idx[breed]
-                data.append((img_path, label))
-        else:
-            raise FileNotFoundError(f"Split file {split_file} not found")
-        
-        return data
 
     def _create_train_val_split(self):
         images_dir = os.path.join(self.dataset_dir, 'Images')
@@ -127,23 +148,6 @@ class StanfordDogs(Dataset):
         annotation_path = annotation_path.rsplit('.', 1)[0]
         return annotation_path
 
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, index):
-        img_path, label = self.data[index]
-        image = Image.open(img_path).convert('RGB')
-        annotation_path = self._get_annotation_path(img_path)
-        if os.path.exists(annotation_path):
-            bbox = self._parse_annotation(annotation_path)
-            if bbox is not None:
-                image = image.crop(bbox)
-        
-        if self.transform is not None:
-            image = self.transform(image)
-        
-        return image, torch.tensor([label], dtype=torch.long)
-
 
 if __name__ == "__main__":
     from torchvision import transforms
@@ -151,7 +155,7 @@ if __name__ == "__main__":
         transforms.Resize((224, 224)),
         transforms.ToTensor()
     ])
-    dataset = StanfordDogsDataset(root='data', split='train', transform=transform, download=True)
+    dataset = StanfordDogs(root='data', split='train', transform=transform, download=True)
     print(f"Dataset size: {len(dataset)}")
     sample_image, sample_label = dataset[0]
     print(f"Sample image size: {sample_image.size()}, Label: {sample_label}")
