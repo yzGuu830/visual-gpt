@@ -23,6 +23,34 @@ def calculate_adaptive_weight(nll_loss, g_loss, disc_weight=1.0, last_layer=None
     return d_weight
 
 
+class AdversarialLoss(nn.Module):
+    def __init__(self, discriminator, method='hinge'):
+        super(AdversarialLoss, self).__init__()
+
+        self.discriminator = discriminator
+        self.method = method
+
+    def g_loss(self, x_hat):
+        logits_fake = self.discriminator(x_hat)
+        return g_loss(logits_fake)
+    
+    def d_loss(self, x, x_hat):
+        logits_real = self.discriminator(x)
+        logits_fake = self.discriminator(x_hat)
+        return d_loss(logits_real, logits_fake, method=self.method)
+
+
+class ReconLoss(nn.Module):
+    def __init__(self, method='l1'):
+        super(ReconLoss, self).__init__()
+
+        FN_MAP = {'l1': nn.L1Loss, 'l2': nn.MSELoss}
+        self.fn = FN_MAP[method]()
+
+    def forward(self, x, x_hat):
+        return self.fn(x, x_hat)
+
+
 def d_loss(logits_real, logits_fake, method='hinge'):
     if method == 'vanilla':
         d_loss = 0.5 * (
@@ -39,20 +67,18 @@ def d_loss(logits_real, logits_fake, method='hinge'):
 
 
 def g_loss(logits_fake):
-    g_loss = - torch.mean(logits_fake)
+    g_loss = -torch.mean(logits_fake)
     return g_loss
 
 
 class PerceptualLoss:
-    def __init__(self, device, weight=1.0):
+    def __init__(self, device):
         self.model = LPIPS().to(device)
         self.model.eval()
-        self.weight = weight
 
     def __call__(self, x, x_hat):
         p_loss = self.model(x, x_hat)
-        return p_loss*self.weight
-
+        return p_loss
 
 
 class LPIPS(nn.Module):
@@ -72,7 +98,7 @@ class LPIPS(nn.Module):
             param.requires_grad = False
 
     def load_from_pretrained(self, name="vgg_lpips"):
-        ckpt = get_ckpt_path(name, "taming/modules/autoencoder/lpips")
+        ckpt = get_ckpt_path(name, "../pretrained_models/lpips")
         self.load_state_dict(torch.load(ckpt, map_location=torch.device("cpu"), weights_only=True), strict=False)
         print("loaded pretrained LPIPS loss from {}".format(ckpt))
 

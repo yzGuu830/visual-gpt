@@ -31,29 +31,10 @@ def dict2namespace(config: dict):
     return namespace
 
 
-def namespace2dict(config):
-    if isinstance(config, argparse.Namespace):
-        return {k: namespace2dict(v) for k, v in vars(config).items()}
-    elif isinstance(config, list):
-        return [namespace2dict(item) for item in config]
-    else:
-        return config
-
-
 def read_yaml(path):
     with open(path, 'r') as f:
         config = yaml.safe_load(f) # dict
     return config
-
-
-def save_checkpoint(model, save_path, save_name='model.pth'):
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    torch.save(model.state_dict(), os.path.join(save_path, save_name))
-
-
-def load_checkpoint(model, load_path):
-    model.load_state_dict(torch.load(load_path), map_location='cpu', strict=False, weights_only=True)
 
 
 def img_grid_show(data, disp_num=256, fig_size=(10,20), show=False, save=None):

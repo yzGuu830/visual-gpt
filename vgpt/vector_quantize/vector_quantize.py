@@ -68,7 +68,7 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
 
         if replace_freq > 0:
             lru_replacement(self, rho=0.01, timeout=replace_freq)
-            print("[VectorQuantize] Enabled LRU replacement with frequency ", replace_freq)
+            print("[VectorQuantize] Enabled LRU replacement with frequency", replace_freq)
 
     def forward(self, z_e):
         """

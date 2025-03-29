@@ -54,8 +54,8 @@ def make_dl(data_name='mnist',
     }
 
     print(
-        '[{}] Data Loaded!\n    Trainset: #-of-batches {}, image shape {}\n    Validation: #-of-batches {}, image shape {}\n'.format(
-            data_name, len(dls['train']), next(iter(dls['train']))[0].shape, len(dls['val']), next(iter(dls['val']))[0].shape)
+        '[{}] data loaded!\n    trainset: #-of-batches {}, image shape {}\n    validation: #-of-batches {}, image shape {}\n'.format(
+            data_name, len(dataloaders['train']), next(iter(dataloaders['train']))[0].shape, len(dataloaders['val']), next(iter(dataloaders['val']))[0].shape)
         )
     return dataloaders
 

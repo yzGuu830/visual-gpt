@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import warnings
 
 def compute_dist(z_e, codebook, cos_dist=False, z_proj_matrix=None, c_proj_matrix=None):
     """
@@ -30,17 +31,40 @@ def compute_dist(z_e, codebook, cos_dist=False, z_proj_matrix=None, c_proj_matri
     return dists
 
 
+def init_dict_forward_hook(module, inputs, outputs):
+	if not module.training or module.done_steps.item() < module.pretrain_steps or module.initialized.item() == 1:
+		return
+
+	z_e = inputs[0].view(-1, module.embedding_dim)
+	z_e = z_e[torch.randperm(z_e.size(0))]
+	mult = module.num_codewords // z_e.size(0) + 1
+	if mult > 1: 
+		warnings.warn(
+			"[VectorQuantize] not enough unique latent vectors to init dictionary, repeating latent vectors to fill dictionary."
+		)
+		z_e = torch.cat(mult * [z_e])
+	module.codebook.data = z_e[:module.num_codewords]
+
+	print(f"[VectorQuantize] codebook initialized from pretrained encoder latent vectors")	
+	module.initialized.fill_(1)
+	return 
+
+
 def freeze_dict_forward_hook(module, inputs, outputs):
-    if not module.training or module.is_freezed.item() == 0:
+    if not module.training or module.done_steps.item() == module.pretrain_steps:
         return
-    
+
+    module.done_steps += 1
+    if module.done_steps == module.pretrain_steps:  # <-- Fixed indentation
+        print(f"[VectorQuantize] pretraining autoencoder {module.pretrain_steps} steps done! now activating VQ layers")
+
     z_e = inputs[0]
     outputs = {
         'z_q': z_e,
-        'q': None,
         'cm_loss': torch.zeros(z_e.shape[0], device=z_e.device),
         'cb_loss': torch.zeros(z_e.shape[0], device=z_e.device),
     }
+
     return outputs
 
 
@@ -99,7 +123,7 @@ class ReplaceLRU():
 			outputs:
 				vq_out (dict)
 		"""
-		if not module.training:
+		if not module.training or module.done_steps.item() < module.pretrain_steps or module.initialized.item() == 0:
 			return
 		
 		if hasattr(module, 'is_freezed'):
