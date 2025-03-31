@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     if arg.wandb is not None:
         wandb.login()
-        wandb.init(project=arg.wandb, name=arg.exp_name+"-recon")
+        wandb.init(project=arg.wandb, name=arg.exp_name+"-gen")
     else:
         print("wandb disabled")
 

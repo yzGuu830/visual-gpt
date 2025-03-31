@@ -163,7 +163,7 @@ class ReconTrainer:
 
                 if pbar.n == self.exp_conf.train_steps:
                     print("Training finished. Testing on validation set...\n--Final results--")
-                    self.eval_epoch(tag='final-step')
+                    self.eval_step(tag='final-step')
                     save_checkpoint(self.model, self.save_path, 'model.pth')
                     return
 
