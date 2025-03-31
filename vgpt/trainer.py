@@ -164,7 +164,7 @@ class ReconTrainer:
                 if pbar.n == self.exp_conf.train_steps:
                     print("Training finished. Testing on validation set...\n--Final results--")
                     self.eval_step(tag='final-step')
-                    save_checkpoint(self.model, self.save_path, 'model.pth')
+                    save_checkpoint(self.model, self.save_path, 'model.bin')
                     return
 
     @torch.no_grad()
@@ -278,11 +278,11 @@ class GenTrainer:
                     self.eval_step(num_class=5, num_sample=10, tag="LM_Generated_Imgs@Iteration{}".format(pbar.n))
 
                 if pbar.n in self.exp_conf.checkpoint_steps:
-                    save_checkpoint(self.model, self.save_path, f'model-ckpt-step-{pbar.n}.pth')
+                    save_checkpoint(self.model.gpt, self.save_path, f'model-ckpt-step-{pbar.n}.pth')
 
                 if pbar.n == self.exp_conf.train_steps:
                     print("Training finished. Saving final model...")
-                    save_checkpoint(self.model, self.save_path, 'model.pth')
+                    save_checkpoint(self.model.gpt, self.save_path, 'model.bin')
                     self.eval_step(num_class=5, num_sample=10, tag="LM_Generated_Imgs@Final")
                     return
     

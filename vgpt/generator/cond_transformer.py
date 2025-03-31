@@ -46,7 +46,7 @@ class CondVisualGPT(nn.Module):
         gpt_config = json.load(open(os.path.join(pretrained_model_name_or_path, 'gpt', 'config.json'), "r"))
         visual_gpt = cls(visual_tokenizer, **gpt_config)
         visual_gpt.gpt.load_state_dict(
-            torch.load(os.path.join(pretrained_model_name_or_path, 'gpt', 'model.pth'), map_location="cpu", weights_only=True), strict=False)
+            torch.load(os.path.join(pretrained_model_name_or_path, 'gpt', 'model.bin'), map_location="cpu", weights_only=True), strict=False)
         
         print("visual autoregressive transformer loaded from pretrained {}!".format(os.path.join(pretrained_model_name_or_path, "gpt")))
         return visual_gpt
@@ -98,6 +98,7 @@ class CondVisualGPT(nn.Module):
         Args:
             cond (torch.Tensor): condition (class) code of shape (bsz, 1)
             z_shape (tuple): latent resolution h, w
+            classifier (optional, callable): a classifier that can be used for rejection sampling
             gen_kwargs: additional arguments for huggingface's model.generate()
         Returns:
             x_hat (torch.Tensor): generated image of shape (bsz, C, H, W)

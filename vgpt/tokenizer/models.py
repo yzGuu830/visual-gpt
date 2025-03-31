@@ -80,7 +80,7 @@ class VisualTokenizer(nn.Module):
         tokenizer = cls(conf['ae_name'], conf['ae_conf'], **conf['vq_conf'])
 
         tokenizer.load_state_dict(
-            torch.load(os.path.join(pretrained_model_name_or_path, "model.pth"), map_location="cpu", weights_only=True), strict=False)
+            torch.load(os.path.join(pretrained_model_name_or_path, "model.bin"), map_location="cpu", weights_only=True), strict=False)
         print(f"visual tokenizer loaded from pretrained {pretrained_model_name_or_path}!")
         
         tokenizer.eval()
