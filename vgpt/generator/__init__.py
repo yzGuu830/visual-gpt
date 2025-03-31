@@ -1,1 +1,1 @@
-from .cond_transformer import CondVisualGPT
+from .cond_transformer import CondVisualGPT, ClassConditionedRejectionSampler

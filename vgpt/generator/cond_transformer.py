@@ -48,6 +48,8 @@ class CondVisualGPT(nn.Module):
         visual_gpt.gpt.load_state_dict(
             torch.load(os.path.join(pretrained_model_name_or_path, 'gpt', 'model.bin'), map_location="cpu", weights_only=True), strict=False)
         
+        visual_gpt.id2label = json.load(open(os.path.join(pretrained_model_name_or_path, 'id2label.json'), "r"))
+        
         print("visual autoregressive transformer loaded from pretrained {}!".format(os.path.join(pretrained_model_name_or_path, "gpt")))
         return visual_gpt
     
@@ -98,7 +100,6 @@ class CondVisualGPT(nn.Module):
         Args:
             cond (torch.Tensor): condition (class) code of shape (bsz, 1)
             z_shape (tuple): latent resolution h, w
-            classifier (optional, callable): a classifier that can be used for rejection sampling
             gen_kwargs: additional arguments for huggingface's model.generate()
         Returns:
             x_hat (torch.Tensor): generated image of shape (bsz, C, H, W)
@@ -143,3 +144,89 @@ class CondVisualGPT(nn.Module):
     @property
     def unk_token_id(self):
         return self.gpt.config.bos_token_id + 1 # unused for handling pad_token
+    
+    def img_normalize(self, batch):
+        # batch: (B, C, H, W)
+        B = batch.size(0)
+        
+        flat = batch.contiguous().view(B, -1)
+        mins = flat.min(dim=1)[0].view(B, 1, 1, 1)
+        maxs = flat.max(dim=1)[0].view(B, 1, 1, 1)
+
+        normalized = (batch - mins) / (maxs - mins + 1e-8)
+        return normalized
+    
+
+
+
+from transformers import ViTForImageClassification, ViTImageProcessor
+ 
+class ClassConditionedRejectionSampler:
+    def __init__(self, 
+                 model: CondVisualGPT, 
+                 classifier: ViTForImageClassification,
+                 processor: ViTImageProcessor):
+        self.model = model
+        self.classifier = classifier
+
+        self.model.eval()
+        self.classifier.eval()
+
+        self.processor = processor
+
+    @torch.no_grad()
+    def sample(self, cls_name: str, z_shape=(16,16), accept_n=1, **gen_kwargs):
+        """
+        Perform class-conditional sampling with classifier-rejection.
+        Args:
+            cls_name (str): class name for condition
+            z_shape (tuple): shape of the generated latent code (h, w)
+            accept_n (int): select best from `accept_n` samples based on classifier score.
+            gen_kwargs: additional arguments for the model.generate() method
+        """
+        print(f"rejection sampling {accept_n} images for class: {cls_name}...")
+        cond = torch.full((1,1), self.label2id_generator(cls_name), dtype=torch.long, device=self.model.gpt.device)
+        x_hat, code = self.model.sample(cond, z_shape=z_shape, num_return_sequences=accept_n, **gen_kwargs) # generated image and code
+
+        scores = self.compute_class_score(self.model.img_normalize(x_hat), cls_name)
+        b_idx = scores.argmax().item()
+        print(f"done! rejection sampling best 1/{accept_n}: best image score is {scores[b_idx]:.4f}")
+        return x_hat[b_idx:b_idx+1], code[b_idx:b_idx+1], scores[b_idx:b_idx+1]
+    
+
+    def compute_class_score(self, x: torch.Tensor, cls_name: str):
+
+        class_id = self.label2id_classifier(cls_name)
+        inputs = self.processor(images=x, return_tensors="pt")
+        outputs = self.classifier(**inputs)
+        logits = outputs.logits
+
+        score = torch.nn.functional.softmax(logits, dim=1)[:, class_id]
+        return score
+    
+
+    def label2id_classifier(self, cls_name: str):
+        id2label = self.classifier.config.id2label
+        if cls_name in id2label.values():
+            class_id = next(k for k, v in id2label.items() if v == cls_name)
+        else:
+            class_id = next((k for k, v in id2label.items() if v.startswith(cls_name)), None) # handle label difference
+
+        if class_id is None:
+            raise ValueError(f"Class name '{cls_name}' not found in {type(self.classifier)} classifier's id2label mapping.")
+        return int(class_id)
+    
+
+    def label2id_generator(self, cls_name: str):
+        id2label = self.model.id2label
+        if cls_name in id2label.values():
+            class_id = next(k for k, v in id2label.items() if v == cls_name)
+        else:
+            class_id = next((k for k, v in id2label.items() if v.startswith(cls_name)), None)
+        
+        if class_id is None:    
+            raise ValueError(f"Class name '{cls_name}' not found in the generator's id2label mapping.")
+        return int(class_id)
+    
+
+    
