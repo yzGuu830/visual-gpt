@@ -146,8 +146,13 @@ def parse_args():
         default="ar_generation.gif",
         help="Path to save the generated GIF"
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu",
+        help="Device to run the model on (e.g., 'cuda' or 'cpu')"
+    )
     args = parser.parse_args()
-    args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return args
 
 
@@ -172,11 +177,11 @@ if __name__ == "__main__":
             cond = torch.full((1, 1), class_id, dtype=torch.long, device=model.gpt.device)
             x_hat, code = model.sample(cond=cond, z_shape=args.z_shape, num_return_sequences=1, do_sample=True, temperature=args.temperature, top_k=args.top_k)
             x_hats.append(x_hat.detach().cpu())
-            codes.append(code)
+            codes.append(code.detach().cpu())
             print("done!")
         else:
             x_hat, code, p = rej_sampler.sample(cls_name=cls_n, accept_n=args.accept_n, do_sample=True, temperature=args.temperature, top_k=args.top_k)
-            x_hats.append(x_hat)
+            x_hats.append(x_hat.detach().cpu())
             codes.append(code.detach().cpu())
     
     print(f"saving generated images into {args.save_path}...")
@@ -189,10 +194,6 @@ if __name__ == "__main__":
 
 """
 python sample.py --from_pretrained ../outputs/vqgan-stfdogs --cls_name maltese --accept_n 3 --temperature 1.0 --top_k 100
-
-python sample.py --from_pretrained ../outputs/vqgan-stfdogs \
-    --cls_name maltese west_highland english_foxhound \
-    --accept_n 1 --temperature 1.0 --top_k 100
 
 """
     
