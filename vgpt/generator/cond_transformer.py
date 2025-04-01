@@ -198,6 +198,7 @@ class ClassConditionedRejectionSampler:
 
         class_id = self.label2id_classifier(cls_name)
         inputs = self.processor(images=x, return_tensors="pt")
+        inputs = {k: v.to(self.classifier.device) for k, v in inputs.items()}
         outputs = self.classifier(**inputs)
         logits = outputs.logits
 
@@ -210,7 +211,7 @@ class ClassConditionedRejectionSampler:
         if cls_name in id2label.values():
             class_id = next(k for k, v in id2label.items() if v == cls_name)
         else:
-            class_id = next((k for k, v in id2label.items() if v.startswith(cls_name)), None) # handle label difference
+            class_id = next((k for k, v in id2label.items() if v.startswith(cls_name) or cls_name.startswith(v)), None) # handle label difference (some classifier label is part of generator label)
 
         if class_id is None:
             raise ValueError(f"Class name '{cls_name}' not found in {type(self.classifier)} classifier's id2label mapping.")
