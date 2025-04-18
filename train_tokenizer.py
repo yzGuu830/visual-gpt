@@ -45,5 +45,5 @@ if __name__ == "__main__":
 """
 python train_tokenizer.py  --exp_name vqgan-stfdogs  --output_path ../outputs  --conf conf/stfdogs.yaml  --wandb visual-gpt
 
-
+python train_tokenizer.py  --exp_name baseline-vq-cifar10  --output_path ../outputs  --conf conf/cifar10.yaml  --wandb thesis
 """

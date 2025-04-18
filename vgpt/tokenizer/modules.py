@@ -64,13 +64,13 @@ class VAEDecoder(nn.Module):
         
         up = nn.ModuleList()  
         for _ in range(1, resolution_depth):
-            out_dim = dim_z // 2
+            out_dim = z_dim // 2
             up.append(nn.Sequential(*[
-                    nn.ConvTranspose2d(dim_z, out_dim, 4, stride=2, padding=1),
+                    nn.ConvTranspose2d(z_dim, out_dim, 4, stride=2, padding=1),
                     NORM_MAP[norm](out_dim),
                     ACT_MAP[act],
                 ]))
-            dim_z = out_dim
+            z_dim = out_dim
         up.append(nn.ConvTranspose2d(out_dim, in_dim, 4, stride=2, padding=1))
         self.up = up
 

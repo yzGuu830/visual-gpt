@@ -63,9 +63,10 @@ class VisualTokenizer(nn.Module):
         z_dim = ae_conf.get('z_dim') or ae_conf.get('z_channels')
         c_dim = vq_kwargs.get('embedding_dim')
         
-        self.in_proj = nn.Linear(z_dim, c_dim, bias=False)
-        self.out_proj = nn.Linear(c_dim, z_dim, bias=False)
-        print(f"[VectorQuantize] factorize latents into low dimension = {c_dim}")
+        proj = z_dim != c_dim
+        self.in_proj = nn.Linear(z_dim, c_dim, bias=False) if proj else nn.Identity()
+        self.out_proj = nn.Linear(c_dim, z_dim, bias=False) if proj else nn.Identity()
+        if proj: print(f"[VectorQuantize] factorize latents into low dimension = {c_dim}")
         if z_dim < c_dim:
             warnings.warn(f"found z_dim={z_dim} and c_dim={c_dim}, codeword dimension might be set too large")
 

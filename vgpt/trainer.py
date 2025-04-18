@@ -139,7 +139,8 @@ class ReconTrainer:
         pbar = tqdm.tqdm(total=self.exp_conf.train_steps)
         while True:
             for x, y in self.dls.get('train'):
-                log = self.train_step(x, disc_on=pbar.n >= self.disc_start)
+                disc_on = pbar.n >= self.disc_start if hasattr(self, 'disc_start') else False
+                log = self.train_step(x, disc_on=disc_on)
                 pbar.update(1)
 
                 desc = f'[train-step {pbar.n}/{self.exp_conf.train_steps}] ' + \
