@@ -1,0 +1,64 @@
+data: 
+  data_name: cifar10
+  data_path: ~/data/
+  img_resolution: [32, 32]
+  num_workers: 0
+
+
+model:
+  tokenizer: 
+    ae_name: vae
+    ae_conf: 
+      in_dim: 3
+      z_dim: 256
+      resolution_depth: 3
+      residual_depth: 3
+      act: relu
+      norm: bn
+    vq_conf:
+      num_codewords: 512
+      embedding_dim: 256
+      z_dim: 256
+      cos_dist: False
+      proj_dim: null
+      random_proj: False
+      replace_freq: 0
+      pretrain_steps: 0
+      init_method: kaiming
+  
+  discriminator:
+    null
+  
+  transformer:
+    condition_vocab: 10
+    max_pos_len: 1024
+    d_model: 768
+    num_transformer_layers: 12
+    num_attn_heads: 12
+
+
+exp:
+  recon:
+    lr: 0.0003
+    bsz: 128
+    train_steps: 10000
+    cm_weight: 2.0
+    p_weight: 0
+    disc_factor: 0
+    log_interval: 5
+    eval_interval: 2000
+    checkpoint_steps: []
+    metrics: ['PSNR', 'SSIM']
+
+  ar:
+    lr: 0.000005
+    bsz: 16
+    train_steps: 100000
+    scheduler: cosine
+    warmup_steps: 10000
+    wd: 0.00001
+    betas: [0.9, 0.98]
+    z_shape: [8, 8]
+    log_interval: 5
+    eval_interval: 5000
+    checkpoint_steps: [50000, 80000]
