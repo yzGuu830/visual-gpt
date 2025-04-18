@@ -35,7 +35,7 @@ def init_dict_forward_hook(module, inputs, outputs):
 	if not module.training or module.done_steps.item() < module.pretrain_steps or module.initialized.item() == 1:
 		return
 
-	z_e = inputs[0].view(-1, module.embedding_dim)
+	z_e = inputs[0].reshape(-1, module.embedding_dim)
 	z_e = z_e[torch.randperm(z_e.size(0))]
 	mult = module.num_codewords // z_e.size(0) + 1
 	if mult > 1: 
@@ -123,11 +123,12 @@ class ReplaceLRU():
 			outputs:
 				vq_out (dict)
 		"""
-		if not module.training or module.done_steps.item() < module.pretrain_steps or module.initialized.item() == 0:
+		if not module.training:
 			return
-		
-		if hasattr(module, 'is_freezed'):
-			if module.is_freezed.item() == 1: return
+		if hasattr(module, 'done_steps'):
+			if module.done_steps.item() < module.pretrain_steps: return
+		if hasattr(module, 'initialized'):
+			if module.initialized.item() == 0: return
 
 		# count down all code by 1 and if used, reset timer to timeout value
 		module._counts -= 1

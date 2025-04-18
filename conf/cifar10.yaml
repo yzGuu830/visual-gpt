@@ -15,16 +15,10 @@ model:
       residual_depth: 3
       act: relu
       norm: bn
+    qtz_name: fsq
     vq_conf:
-      num_codewords: 512
-      embedding_dim: 256
-      z_dim: 256
-      cos_dist: False
-      proj_dim: null
-      random_proj: False
-      replace_freq: 0
-      pretrain_steps: 0
-      init_method: kaiming
+      levels: [4, 5, 5, 5]
+      embedding_dim: 4
   
   discriminator:
     null

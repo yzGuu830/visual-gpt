@@ -30,6 +30,7 @@ class ReconTrainer:
 
     def load_model(self):
         self.model = VisualTokenizer(self.model_conf.ae_name, 
+                                     self.model_conf.qtz_name,
                                      namespace2dict(self.model_conf.ae_conf), 
                                      **namespace2dict(self.model_conf.vq_conf))
         self.model.to(self.arg.device)
@@ -73,8 +74,12 @@ class ReconTrainer:
         # generator update
         x_hat, vq_out = self.model(x)
 
-        cm_loss = vq_out.get('cm_loss').mean()
-        cb_loss = vq_out.get('cb_loss').mean()
+        if 'cm_loss' in vq_out and 'cb_loss' in vq_out:
+            cm_loss = vq_out.get('cm_loss').mean()
+            cb_loss = vq_out.get('cb_loss').mean()
+        else:
+            cm_loss = torch.tensor(0.)
+            cb_loss = torch.tensor(0.)
 
         recon_loss = self.recon_loss_fn(x_hat, x)
         

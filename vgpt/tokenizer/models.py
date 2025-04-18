@@ -5,16 +5,17 @@ import torch
 import torch.nn as nn 
 
 from ..vector_quantize import VectorQuantize
+from ..scalar_quantize import FSQ
 from .modules import VAEEncoder, VAEDecoder
 from .taming.modules import VQGANEncoder, VQGANDecoder
 
 
 
 class VisualTokenizer(nn.Module):
-    def __init__(self, ae_name: str, ae_conf: dict, **vq_kwargs):
+    def __init__(self, ae_name: str, qtz_name: str, ae_conf: dict, **vq_kwargs):
         super(VisualTokenizer, self).__init__()
 
-        self.init_modules(ae_name, ae_conf, vq_kwargs)
+        self.init_modules(ae_name, qtz_name, ae_conf, vq_kwargs)
 
     @torch.no_grad()
     def encode(self, x):
@@ -48,17 +49,17 @@ class VisualTokenizer(nn.Module):
 
         return x_hat, vq_out
 
-    def init_modules(self, ae_name, ae_conf, vq_kwargs):
+    def init_modules(self, ae_name, qtz_name, ae_conf, vq_kwargs):
         ENC_MAP = {"vae": VAEEncoder, "vqgan": VQGANEncoder}
         DEC_MAP = {"vae": VAEDecoder, "vqgan": VQGANDecoder}
+        QTZ_MAP = {"vq": VectorQuantize, "fsq": FSQ}
 
         if not isinstance(ae_conf, dict):
             ae_conf = vars(ae_conf)
         
         self.encoder = ENC_MAP[ae_name](**ae_conf)
         self.decoder = DEC_MAP[ae_name](**ae_conf)
-
-        self.quantizer = VectorQuantize(**vq_kwargs)
+        self.quantizer = QTZ_MAP[qtz_name](**vq_kwargs)
 
         z_dim = ae_conf.get('z_dim') or ae_conf.get('z_channels')
         c_dim = vq_kwargs.get('embedding_dim')
@@ -78,7 +79,7 @@ class VisualTokenizer(nn.Module):
         
         conf = json.load(open(os.path.join(pretrained_model_name_or_path, "config.json"), "r"))
         
-        tokenizer = cls(conf['ae_name'], conf['ae_conf'], **conf['vq_conf'])
+        tokenizer = cls(conf['ae_name'], conf['qtz_name'], conf['ae_conf'], **conf['vq_conf'])
 
         tokenizer.load_state_dict(
             torch.load(os.path.join(pretrained_model_name_or_path, "model.bin"), map_location="cpu", weights_only=True), strict=False)

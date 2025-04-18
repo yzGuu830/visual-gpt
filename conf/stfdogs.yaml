@@ -18,6 +18,7 @@ model:
       num_res_blocks: 2
       attn_resolutions: [8]
       dropout: 0.0
+    qtz_name: vq
     vq_conf:
       num_codewords: 4096
       embedding_dim: 12
