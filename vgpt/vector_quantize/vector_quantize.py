@@ -101,6 +101,7 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
             cm_loss += self.penalty_weight * penalty_loss
         
         return {
+            'z_e': z_e,
             'z_q': z_q,
             'q': q,
             'cm_loss': cm_loss,

@@ -13,6 +13,7 @@ def parse_args_confs():
     parser.add_argument('--output_path', type=str, default='../outputs', help='output path')
 
     parser.add_argument('--conf', type=str, default='conf/stfdogs.yaml', help='path to the config file')
+    parser.add_argument('--latent_vis_every', type=int, default=0, help='visualize latent every n steps')
     
     parser.add_argument('--wandb', type=str, default=None, help='wandb project name')
     parser.add_argument('--seed', type=int, default=53)
@@ -45,5 +46,5 @@ if __name__ == "__main__":
 """
 python train_tokenizer.py  --exp_name vqgan-stfdogs  --output_path ../outputs  --conf conf/stfdogs.yaml  --wandb visual-gpt
 
-python train_tokenizer.py  --exp_name baseline-vq-cifar10  --output_path ../outputs  --conf conf/cifar10.yaml  --wandb thesis
+python train_tokenizer.py  --exp_name baseline-vq-cifar10  --output_path ../outputs  --conf conf/cifar10.yaml
 """

@@ -66,10 +66,13 @@ class ReconTrainer:
             if m not in METRICS:
                 raise ValueError(f"Unknown metric '{m}' specified in config.")
             self.metric_fns[m] = METRICS[m]
-        self.cnter = VQCodebookCounter(codebook_size=self.model.quantizer.num_codewords, device=self.arg.device)    
+        self.cnter = VQCodebookCounter(codebook_size=self.model.quantizer.num_codewords, device=self.arg.device)
+        if self.arg.latent_vis_every > 0: 
+            self.latentvislzer = LatentVisualizer(save_dir=self.save_path, use_tsne=True, max_points=2048, use_wandb=self.arg.wandb is not None)   
 
-    def train_step(self, x, disc_on=False):
+    def train_step(self, x, step=1):
         x = x.to(self.arg.device)
+        disc_on = step >= self.disc_start if hasattr(self, 'disc_start') else False
 
         # generator update
         x_hat, vq_out = self.model(x)
@@ -119,6 +122,14 @@ class ReconTrainer:
             vq_active = vq_out.get('q').unique().numel() / self.model.quantizer.num_codewords
         else:
             vq_active = 0.
+        if self.arg.latent_vis_every > 0 and (step-1) % self.arg.latent_vis_every == 0: 
+            C = self.model.quantizer.codebook.data if self.model_conf.qtz_name == 'vq' else None
+            self.latentvislzer.plot(z=vq_out.get('z_e'), 
+                                    z_q=vq_out.get('z_q'),
+                                    codebook=C,
+                                    q=vq_out.get('q'),
+                                    step=step
+                                    )
             
         return {
             'loss': loss.item(),
@@ -144,8 +155,7 @@ class ReconTrainer:
         pbar = tqdm.tqdm(total=self.exp_conf.train_steps)
         while True:
             for x, y in self.dls.get('train'):
-                disc_on = pbar.n >= self.disc_start if hasattr(self, 'disc_start') else False
-                log = self.train_step(x, disc_on=disc_on)
+                log = self.train_step(x, step=pbar.n+1)
                 pbar.update(1)
 
                 desc = f'[train-step {pbar.n}/{self.exp_conf.train_steps}] ' + \
@@ -184,7 +194,7 @@ class ReconTrainer:
             x = x.to(self.arg.device)
 
             x_hat, vq_out = self.model(x)
-            self.cnter.update(vq_out.get("q")[:, None, None, :])
+            self.cnter.update(vq_out.get("q")[:, None, None, :].long())
 
             x_np = x.cpu().numpy()
             x_hat_np = x_hat.cpu().numpy()
