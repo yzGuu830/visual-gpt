@@ -57,8 +57,7 @@ class ReconTrainer:
             print(f'discriminator training starts at step {self.disc_start}')
             self.adv_loss_fn = AdversarialLoss(self.discriminator, method='hinge')
         
-        if self.exp_conf.p_weight > 0:
-            self.pcpt_loss_fn = PerceptualLoss(self.arg.device)
+        self.pcpt_loss_fn = PerceptualLoss(self.arg.device)
         
         self.metric_fns = {}
         for m in self.exp_conf.metrics:
@@ -137,16 +136,17 @@ class ReconTrainer:
             'p_loss': p_loss.item(),
             'cm_loss': cm_loss.item(),
             'cb_loss': cb_loss.item(),
+            'vq_active': vq_active * 100,
             'g_loss': g_loss.item(),
             'd_weight': d_weight.item(),
             'd_loss': d_loss.item(),
-            'vq_active': vq_active * 100,
         }
 
     def train(self, ):
 
         self.load_data()
         self.load_model()
+        self.plt_batch_idx = np.random.randint(len(self.dls.get('val'))-1)
 
         os.makedirs(self.save_path, exist_ok=True)
         json.dump(namespace2dict(self.model_conf), open(os.path.join(self.save_path, 'config.json'), 'w'), indent=4)
@@ -187,7 +187,6 @@ class ReconTrainer:
     def eval_step(self, tag='train-step-100'):
         self.model.eval()
         
-        plt_batch_idx = np.random.randint(len(self.dls.get('val'))-1)
         self.cnter.reset_stats(1)
         stats = {m:[] for m in self.metric_fns.keys()} 
         for idx, (x, y) in enumerate(self.dls.get('val')): 
@@ -196,6 +195,12 @@ class ReconTrainer:
             x_hat, vq_out = self.model(x)
             self.cnter.update(vq_out.get("q")[:, None, None, :].long())
 
+            if hasattr(self, 'pcpt_loss_fn'):
+                p_loss = self.pcpt_loss_fn(x, x_hat).mean()
+                if 'test_p_loss' not in stats:
+                    stats['test_p_loss'] = []
+                stats['test_p_loss'].append(p_loss.item())
+
             x_np = x.cpu().numpy()
             x_hat_np = x_hat.cpu().numpy()
 
@@ -203,7 +208,7 @@ class ReconTrainer:
                 for m, fn in self.metric_fns.items():
                     stats[m].append(fn(x_np[i], x_hat_np[i]))
 
-            if idx == plt_batch_idx:
+            if idx == self.plt_batch_idx:
                 x_np_plot, x_hat_np_plot = x_np.copy(), x_hat_np.copy()
 
         for m, vs in stats.items():
@@ -212,7 +217,7 @@ class ReconTrainer:
         stats['util_ratio'] = util_ratio*100
         print(f"{tag}: " + ' | '.join([f'{k}: {v:.5f}' for k, v in stats.items()]))
         
-        plot_reconstructions(x_np_plot, x_hat_np_plot, tag, self.save_path)
+        plot_reconstructions(x_np_plot, x_hat_np_plot, tag, self.save_path, max_shown=20)
         if wandb.run is not None:
             wandb.log(stats)
 
