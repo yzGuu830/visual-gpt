@@ -218,7 +218,6 @@ class ReconTrainer:
                 x_np = x.cpu().numpy()
                 x_hat_np = x_hat.cpu().numpy()
                 x_np_plot, x_hat_np_plot = x_np.copy(), x_hat_np.copy()
-                break
 
         for m, vs in stats.items():
             stats[m] = np.mean(vs)
