@@ -5,17 +5,30 @@ from .cub200 import CUB200
 from .stanforddogs import StanfordDogs
 
 
-def make_dl(data_name='mnist', 
-            data_path='~/data',
-            train_bsz=256, 
-            val_bsz=256,
-            img_resolution=[256,256],
-            **dl_kwargs):
+def make_dataloaders(data_name='mnist', 
+                     data_path='~/data',
+                     train_bsz=256, 
+                     val_bsz=256,
+                     img_resolution=[256,256],
+                     **dl_kwargs):
     
     if data_name == 'cifar10':
-        transform = transforms.ToTensor()
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            # transforms.Normalize(0.5, 0.5, 0.5)
+            ])
         train_ds = datasets.CIFAR10(root='~/data/cifar10', train=True, download=True, transform=transform)
         valid_ds = datasets.CIFAR10(root='~/data/cifar10', train=False, download=True, transform=transform)
+
+    if data_name == 'celeba':
+        transform = transforms.Compose([
+            transforms.Resize([128, 128]),
+            transforms.ToTensor(),
+        ])
+        train_ds = datasets.CelebA(data_path,
+            split='train', download=True, transform=transform)
+        valid_ds = datasets.CelebA(data_path,
+            split='valid', download=True, transform=transform)
 
     elif data_name == 'imagenet':
         transform = transforms.Compose([
@@ -52,7 +65,6 @@ def make_dl(data_name='mnist',
         'train': DataLoader(train_ds, batch_size=train_bsz, shuffle=True, **dl_kwargs),
         'val': DataLoader(valid_ds, batch_size=val_bsz, shuffle=False, **dl_kwargs)
     }
-
     print(
         '[{}] data loaded!\n    trainset: #-of-batches {}, image shape {}\n    validation: #-of-batches {}, image shape {}\n'.format(
             data_name, len(dataloaders['train']), next(iter(dataloaders['train']))[0].shape, len(dataloaders['val']), next(iter(dataloaders['val']))[0].shape)
@@ -62,7 +74,8 @@ def make_dl(data_name='mnist',
 
 if __name__ == "__main__":
 
-    dls = make_dl('stfdogs', '../data', datrain_bsz=16, val_bsz=16)
+    dls = make_dataloaders('cifar10', '../data', train_bsz=16, val_bsz=16)
 
     X, y = next(iter(dls['val']))
     print(X.shape, y.shape)
+    print(X.min(), X.max(), X.mean(), X.std())

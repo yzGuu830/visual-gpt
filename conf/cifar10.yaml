@@ -47,6 +47,8 @@ exp:
   recon:
     lr: 0.0003
     bsz: 128
+    betas: [0.9, 0.95]
+    task_loss: l2
     train_steps: 10000
     cm_weight: 2.0
     p_weight: 0
@@ -54,7 +56,7 @@ exp:
     log_interval: 5
     eval_interval: 2000
     checkpoint_steps: []
-    metrics: ['PSNR', 'SSIM']
+    metrics: ['PSNR', 'SSIM', 'LPIPS']
 
   ar:
     lr: 0.000005

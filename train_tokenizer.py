@@ -4,7 +4,14 @@ import torch
 import wandb
 
 from vgpt import ReconTrainer
-from utils import *
+from dataset.data import make_dataloaders
+
+from utils import (
+    seed_everything,
+    dict2namespace,
+    namespace2dict,
+    read_yaml
+)
 
 
 def parse_args_confs():
@@ -27,19 +34,24 @@ def parse_args_confs():
 
 
 if __name__ == "__main__":
-    
     arg, conf = parse_args_confs()
-    
     seed_everything(arg.seed)
 
     if arg.wandb is not None:
         wandb.login()
-        wandb.init(project=arg.wandb, name=arg.exp_name)
+        wandb.init(project=arg.wandb, name=arg.exp_name,
+                   config=namespace2dict(conf),
+                   )
     else:
         print("wandb disabled")
 
+    dataloaders = make_dataloaders(
+        train_bsz=conf.exp.recon.bsz, val_bsz=conf.exp.recon.bsz,
+        **namespace2dict(conf.data)
+    )
+
     trainer = ReconTrainer(conf, arg)
-    trainer.train()
+    trainer.train(dataloaders)
     wandb.finish()
 
 

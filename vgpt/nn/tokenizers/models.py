@@ -4,8 +4,8 @@ import warnings
 import torch
 import torch.nn as nn 
 
-from ..vector_quantize import VectorQuantize
-from ..scalar_quantize import FSQ
+from .quantizers.vector_quantize import VectorQuantize
+from .quantizers.scalar_quantize import FSQ
 from .modules import VAEEncoder, VAEDecoder
 from .taming.modules import VQGANEncoder, VQGANDecoder
 

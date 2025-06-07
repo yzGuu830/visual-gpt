@@ -8,8 +8,7 @@ import json
 from transformers.models.gpt2.modeling_gpt2 import GPT2LMHeadModel
 from transformers.models.gpt2.configuration_gpt2 import GPT2Config
 
-from ..tokenizer import VisualTokenizer
-
+from ..tokenizers import VisualTokenizer
 
 
 class CondVisualGPT(nn.Module):

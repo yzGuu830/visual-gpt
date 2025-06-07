@@ -4,7 +4,14 @@ import torch
 import wandb
 
 from vgpt import GenTrainer
-from utils import *
+from dataset.data import make_dataloaders
+
+from utils import (
+    seed_everything,
+    dict2namespace,
+    namespace2dict,
+    read_yaml
+)
 
 def parse_args_confs():
 
@@ -31,12 +38,19 @@ if __name__ == "__main__":
 
     if arg.wandb is not None:
         wandb.login()
-        wandb.init(project=arg.wandb, name=arg.exp_name+"-gen")
+        wandb.init(project=arg.wandb, name=arg.exp_name+'-gen',
+                   config=namespace2dict(conf),
+                   )
     else:
         print("wandb disabled")
 
+    dataloaders = make_dataloaders(
+        train_bsz=conf.exp.recon.bsz, val_bsz=conf.exp.recon.bsz,
+        **namespace2dict(conf.data)
+    )
+
     trainer = GenTrainer(conf, arg)
-    trainer.train(arg.tokenizer_path)
+    trainer.train(dataloaders, arg.tokenizer_path)
     wandb.finish()
 
 
