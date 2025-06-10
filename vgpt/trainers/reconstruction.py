@@ -21,7 +21,8 @@ from .utils import (
     plot_reconstructions, 
     namespace2dict, 
     save_checkpoint, 
-    load_checkpoint
+    load_checkpoint,
+    img_normalize
 )
 
 from ..eval_metrics import (
@@ -207,9 +208,10 @@ class ReconTrainer:
         self.vq_eval.reset_stats()
         stats = {m:[] for m in self.metric_fns.keys()} 
         for idx, (x, y) in tqdm.tqdm(enumerate(eval_loader), desc='Evaluating Model', total=len(eval_loader)): 
-            x = x.to(self.arg.device)
+            x = x.to(self.arg.device)       # [0, 1] range
             x_hat, vq_out = self.model(x)
 
+            x_hat = img_normalize(x_hat)    # normalize to [0, 1] range
             self.vq_eval.update(vq_out.get("q").long())
             for m, fn in self.metric_fns.items():
                 stats[m].append(fn(x, x_hat))

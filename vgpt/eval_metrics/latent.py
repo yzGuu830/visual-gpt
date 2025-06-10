@@ -34,7 +34,7 @@ class VectorQuantEval:
         self.max_entropy = np.log2(self.codebook_size)
 
     def reset_stats(self):
-        self.counts = torch.zeros(self.codebook_size)
+        self.counts = torch.zeros(self.codebook_size, dtype=torch.float64)
         self.total_counts = 0
 
     def update(self, codes):
@@ -44,14 +44,12 @@ class VectorQuantEval:
         """ 
         self.total_counts += codes.numel()
         one_hot = torch.nn.functional.one_hot(codes, num_classes=self.codebook_size) # (bsz, *, codebook_size)
-        self.counts += one_hot.view(-1, self.codebook_size).sum(0)
+        self.counts += one_hot.view(-1, self.codebook_size).sum(0).detach().cpu()
 
     def cpt_stats(self):
         
         dist = self.counts / self.total_counts
-        print(self.counts, self.total_counts)
-        print(dist)
-        assert dist.sum() == 1
+        assert abs(dist.sum().item() - 1.0) < 1e-6
         
         entropy = (-torch.sum(dist * torch.log2(dist+1e-10))).item()
         ppl = 2 ** entropy
