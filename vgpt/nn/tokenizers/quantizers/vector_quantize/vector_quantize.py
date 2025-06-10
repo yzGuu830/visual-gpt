@@ -91,14 +91,14 @@ class VectorQuantize(_BaseVectorQuantizeLayer):
         q = dists.min(dim=-1).indices
         z_q = F.embedding(q, self.codebook)
 
-        if self.training:
-            z_q = ste(z_e, z_q)
-        
         cm_loss, cb_loss = self.compute_loss(z_e, z_q)
 
         if self.penalty_weight > 0: # encourage dists to be uniform
             penalty_loss = self.penalty_loss(dists)
             cm_loss += self.penalty_weight * penalty_loss
+
+        if self.training:
+            z_q = ste(z_e, z_q)
         
         return {
             'z_e': z_e,

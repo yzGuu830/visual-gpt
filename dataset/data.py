@@ -20,7 +20,7 @@ def make_dataloaders(data_name='mnist',
         train_ds = datasets.CIFAR10(root='~/data/cifar10', train=True, download=True, transform=transform)
         valid_ds = datasets.CIFAR10(root='~/data/cifar10', train=False, download=True, transform=transform)
 
-    if data_name == 'celeba':
+    elif data_name == 'celeba':
         transform = transforms.Compose([
             transforms.Resize([128, 128]),
             transforms.ToTensor(),
