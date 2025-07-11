@@ -1,0 +1,72 @@
+data: 
+  data_name: mnist
+  data_path: ~/data/
+  img_resolution: [28, 28]
+  num_workers: 0
+
+
+model:
+  tokenizer: 
+    ae_name: vae
+    ae_conf: 
+      in_dim: 1
+      z_dim: 64
+      resolution_depth: 3
+      residual_depth: 1
+      act: relu
+      norm: null
+    # qtz_name: fsq
+    # vq_conf:
+    #   levels: [4, 5, 5, 5]
+    #   embedding_dim: 4
+    qtz_name: vq
+    vq_conf:
+      num_codewords: 256
+      embedding_dim: 64
+      z_dim: 64
+      cos_dist: False
+      proj_dim: null
+      random_proj: False
+      replace_freq: 0
+      pretrain_steps: 0
+      init_method: kaiming
+
+  
+  discriminator:
+    null
+  
+  transformer:
+    condition_vocab: 10
+    max_pos_len: 1024
+    d_model: 768
+    num_transformer_layers: 12
+    num_attn_heads: 12
+
+
+exp:
+  recon:
+    lr: 0.0003
+    bsz: 128
+    betas: [0.9, 0.95]
+    task_loss: l2
+    train_steps: 5000
+    cm_weight: .25
+    p_weight: 0
+    disc_factor: 0
+    log_interval: 5
+    eval_interval: 1000
+    checkpoint_steps: []
+    metrics: ['PSNR', 'SSIM', 'LPIPS']
+
+  ar:
+    lr: 0.000005
+    bsz: 16
+    train_steps: 100000
+    scheduler: cosine
+    warmup_steps: 10000
+    wd: 0.00001
+    betas: [0.9, 0.98]
+    z_shape: [8, 8]
+    log_interval: 5
+    eval_interval: 5000
+    checkpoint_steps: [50000, 80000]
