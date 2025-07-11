@@ -78,7 +78,7 @@ class ReconTrainer:
             m = m.strip().upper()
             if m not in METRIC_FUNCS:
                 raise ValueError(f"Unknown metric '{m}' specified in config.")
-            fn = METRIC_FUNCS[m]()
+            fn = METRIC_FUNCS[m](in_channels=self.model_conf.ae_conf.in_dim)
             if isinstance(fn, torch.nn.Module):
                 fn.to(self.arg.device)
             self.metric_fns[m] = fn
@@ -105,20 +105,27 @@ class ReconTrainer:
             cb_loss = torch.tensor(0.)
 
         recon_loss = self.recon_loss_fn(x_hat, x)
-        p_loss = self.pcpt_loss_fn(x, x_hat).mean()
-    
-        if hasattr(self, 'discriminator') and disc_on:
+        loss = recon_loss + self.exp_conf.cm_weight * cm_loss + cb_loss # vq-vae loss
+        
+        log = {
+            'loss': loss.item(),
+            'recon_loss': recon_loss.item(),
+            'cm_loss': cm_loss.item(),
+            'cb_loss': cb_loss.item(),
+        }
+
+        if self.exp_conf.p_weight > 0: # perceptual loss
+            p_loss = self.pcpt_loss_fn(x, x_hat).mean()
+            loss += self.exp_conf.p_weight * p_loss
+            log['p_loss'] = p_loss.item()
+
+        if hasattr(self, 'discriminator') and disc_on: # adversarial loss
             g_loss = self.adv_loss_fn.g_loss(x_hat.contiguous())
             d_weight = calculate_adaptive_weight(recon_loss, g_loss, self.exp_conf.disc_weight, 
                                         last_layer=self.model.get_last_layer())
-        else:
-            g_loss = torch.tensor(0.)
-            d_weight = torch.tensor(0.)
-
-        loss = recon_loss + \
-                self.exp_conf.p_weight * p_loss + \
-                self.exp_conf.disc_factor * d_weight * g_loss + \
-                self.exp_conf.cm_weight * cm_loss + cb_loss 
+            loss += self.exp_conf.disc_factor * d_weight * g_loss
+            log['g_loss'] = g_loss.item()
+            log['d_weight'] = d_weight.item()
 
         self.opt.zero_grad()
         loss.backward()
@@ -130,14 +137,13 @@ class ReconTrainer:
             self.disc_opt.zero_grad()
             d_loss.backward()
             self.disc_opt.step()
-        else:
-            d_loss = torch.tensor(0.)
+            log['d_loss'] = d_loss.item()
 
 
         if vq_out.get('q') is not None:
             vq_active = vq_out.get('q').unique().numel() / self.model.quantizer.num_codewords
-        else:
-            vq_active = 0.
+            log['vq_active'] = vq_active * 100
+        
         if self.arg.latent_vis_every > 0 and (step-1) % self.arg.latent_vis_every == 0: 
             C = self.model.quantizer.codebook.data if self.model_conf.qtz_name == 'vq' else None
             self.latentvislzer.plot(z=vq_out.get('z_e'), 
@@ -147,17 +153,7 @@ class ReconTrainer:
                                     step=step
                                     )
             
-        return {
-            'loss': loss.item(),
-            'recon_loss': recon_loss.item(),
-            'p_loss': p_loss.item(),
-            'cm_loss': cm_loss.item(),
-            'cb_loss': cb_loss.item(),
-            'vq_active': vq_active * 100,
-            'g_loss': g_loss.item(),
-            'd_weight': d_weight.item(),
-            'd_loss': d_loss.item(),
-        }
+        return log
 
 
     def train(self, dataloaders):
@@ -174,15 +170,7 @@ class ReconTrainer:
             for x, y in dataloaders.get('train'):
                 log = self.train_step(x, step=pbar.n+1)
                 pbar.update(1)
-
-                desc = f'[train-step {pbar.n}/{self.exp_conf.train_steps}] ' + \
-                          f'total loss: {log["loss"]:.4f} | ' + \
-                          f'recon loss: {log["recon_loss"]:.4f} | ' + \
-                          f'p loss: {log["p_loss"]:.4f} | ' + \
-                          f'commit loss: {log["cm_loss"]:.4f} | ' + \
-                          f'vq active ratio: {log["vq_active"]:.4f}%'
-                if hasattr(self, 'discriminator') and pbar.n >= self.disc_start:
-                    desc += f' | g loss: {log["g_loss"]:.4f} | d loss: {log["d_loss"]:.4f}'
+                desc = ' | '.join([f'{k}: {v:.4f}' for k, v in log.items()])
                 pbar.set_description(desc)
 
                 if wandb.run is not None and pbar.n % self.exp_conf.log_interval == 0:

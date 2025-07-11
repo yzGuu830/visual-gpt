@@ -9,6 +9,7 @@ ACT_MAP = {"relu": nn.ReLU(), "elu": nn.ELU(1.0), 'leaky_relu': nn.LeakyReLU(0.0
 
 
 NORM_MAP = {
+    None: lambda channel: nn.Identity(),
     "bn": lambda channel: nn.BatchNorm2d(channel, eps=1e-6, affine=True), 
     "gn": lambda channel: nn.GroupNorm(num_groups=32, num_channels=channel, eps=1e-6, affine=True)
     }
@@ -43,7 +44,7 @@ class VAEEncoder(nn.Module):
                     ACT_MAP[act],
                 ]))
             in_dim = out_dim
-        down.append(nn.Conv2d(out_dim, z_dim, 4, stride=2, padding=1))
+        down.append(nn.Conv2d(out_dim, z_dim, 3, stride=1, padding=1))
         self.down = down
         
         resblocks = [ ResBlock(z_dim, z_dim, act, norm) for _ in range(residual_depth) ]
@@ -71,7 +72,7 @@ class VAEDecoder(nn.Module):
                     ACT_MAP[act],
                 ]))
             z_dim = out_dim
-        up.append(nn.ConvTranspose2d(out_dim, in_dim, 4, stride=2, padding=1))
+        up.append(nn.ConvTranspose2d(out_dim, in_dim, 3, stride=1, padding=1))
         self.up = up
 
     def forward(self, z):
