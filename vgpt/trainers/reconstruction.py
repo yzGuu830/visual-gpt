@@ -140,7 +140,7 @@ class ReconTrainer:
             log['d_loss'] = d_loss.item()
 
 
-        if vq_out.get('q') is not None:
+        if vq_out.get('q') is not None and self.model.quantizer.done_steps.item() >= self.model.quantizer.pretrain_steps:
             vq_active = vq_out.get('q').unique().numel() / self.model.quantizer.num_codewords
             log['vq_active'] = vq_active * 100
         
@@ -149,8 +149,9 @@ class ReconTrainer:
             self.latentvislzer.plot(z=vq_out.get('z_e'), 
                                     z_q=vq_out.get('z_q'),
                                     codebook=C,
-                                    q=vq_out.get('q'),
-                                    step=step
+                                    q=vq_out.get('q') if self.model.quantizer.done_steps.item() >= self.model.quantizer.pretrain_steps else None,
+                                    step=step,
+                                    apply_colormap=(self.model.quantizer.num_codewords <= 20)
                                     )
             
         return log
@@ -195,12 +196,15 @@ class ReconTrainer:
         
         self.vq_eval.reset_stats()
         stats = {m:[] for m in self.metric_fns.keys()} 
-        for idx, (x, y) in tqdm.tqdm(enumerate(eval_loader), desc='Evaluating Model', total=len(eval_loader)): 
+        for idx, (x, y) in enumerate(eval_loader): 
             x = x.to(self.arg.device)       # [0, 1] range
             x_hat, vq_out = self.model(x)
 
             x_hat = img_normalize(x_hat)    # normalize to [0, 1] range
-            self.vq_eval.update(vq_out.get("q").long())
+            
+            if self.model.quantizer.done_steps.item() >= self.model.quantizer.pretrain_steps:
+                self.vq_eval.update(vq_out.get("q").long())
+            
             for m, fn in self.metric_fns.items():
                 stats[m].append(fn(x, x_hat))
 
@@ -212,12 +216,13 @@ class ReconTrainer:
         for m, vs in stats.items():
             stats[m] = np.mean(vs)
 
-        vq_stats = self.vq_eval.cpt_stats()
-        stats.update(vq_stats)
+        if self.model.quantizer.done_steps.item() >= self.model.quantizer.pretrain_steps:
+            vq_stats = self.vq_eval.cpt_stats()
+            stats.update(vq_stats)
         print(f"{tag}: " + ' | '.join([f'{k}: {v:.5f}' for k, v in stats.items()]))
         
-        plot_reconstructions(x_np_plot, x_hat_np_plot, tag, self.save_path, max_shown=20)
-        
+        plot_reconstructions(x_np_plot, x_hat_np_plot, tag, self.save_path, max_shown=40)
+
         if wandb.run is not None:
             wandb.log(stats)
 

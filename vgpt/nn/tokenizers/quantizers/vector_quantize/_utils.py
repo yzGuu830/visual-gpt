@@ -51,21 +51,24 @@ def init_dict_forward_hook(module, inputs, outputs):
 
 
 def freeze_dict_forward_hook(module, inputs, outputs):
-    if not module.training or module.done_steps.item() == module.pretrain_steps:
-        return
+	if module.done_steps.item() >= module.pretrain_steps:
+		return
+	
+	if module.training:
+		module.done_steps += 1
 
-    module.done_steps += 1
-    if module.done_steps == module.pretrain_steps:  # <-- Fixed indentation
-        print(f"[VectorQuantize] pretraining autoencoder {module.pretrain_steps} steps done! now activating VQ layers")
+	if module.done_steps.item() == module.pretrain_steps:
+		print(f"[VectorQuantize] pretraining autoencoder {module.pretrain_steps} steps done! now activating VQ layers")
 
-    z_e = inputs[0]
-    outputs = {
-        'z_q': z_e,
-        'cm_loss': torch.zeros(z_e.shape[0], device=z_e.device),
-        'cb_loss': torch.zeros(z_e.shape[0], device=z_e.device),
-    }
-
-    return outputs
+	z_e = inputs[0]
+	outputs = {
+		'z_e': z_e,
+		'z_q': z_e,
+		'q': torch.zeros(z_e.shape[:2], dtype=torch.long, device=z_e.device),
+		'cm_loss': torch.zeros(z_e.shape[0], device=z_e.device),
+		'cb_loss': torch.zeros(z_e.shape[0], device=z_e.device),
+	}
+	return outputs
 
 
 def init_proj_matrix(random_proj, dim, proj_dim):
