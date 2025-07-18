@@ -3,7 +3,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import wandb
-
+import matplotlib.cm as cm
+import warnings
 
 from io import BytesIO
 from PIL import Image
@@ -81,13 +82,14 @@ class VectorQuantLatentVisualizer:
             os.makedirs(self.save_dir, exist_ok=True)
 
     def _reduce_dim(self, data):
+        if data.shape[1] <= 2:
+            return data
         if self.use_tsne:
-            reducer = TSNE(n_components=2, perplexity=30, max_iter=300)
+            return safe_reduce(TSNE, data, perplexity=30.0)
         else:
-            reducer = PCA(n_components=2)
-        return reducer.fit_transform(data)
+            return safe_reduce(PCA, data)
 
-    def plot(self, z, z_q, codebook, q=None, step=0):
+    def plot(self, z, z_q, codebook, q=None, step=0, apply_colormap=True):
         """
         z: Tensor of shape (B, *, D), encoder outputs
         z_q: Tensor of shape (B, *, D), quantized encoder outputs
@@ -108,28 +110,93 @@ class VectorQuantLatentVisualizer:
             if q is not None:
                 q = q[idx]
 
-        z_low = self._reduce_dim(z.detach().cpu().numpy())
-        z_q_low = self._reduce_dim(z_q.detach().cpu().numpy())
-        if codebook is not None:
-            codebook_low = self._reduce_dim(codebook.detach().cpu().numpy())
-
+        if codebook is None:
+            z_low = self._reduce_dim(z.detach().cpu().numpy())
+        else:
+            z_and_c = torch.cat([z.detach().cpu(), codebook.detach().cpu()], dim=0) 
+            z_and_c_low = self._reduce_dim(z_and_c.numpy())
+            z_low = z_and_c_low[:z.shape[0]]
+            codebook_low = z_and_c_low[z.shape[0]:]
 
         plt.figure(figsize=(12, 8))
+        if q is not None:
+            if apply_colormap: # use colormap for each code-word (used when K is small)
+                if codebook.shape[0] > 20:
+                    warnings.warn("Using colormap with more than 20 codewords may not display correctly. Consider setting `apply_colormap=False`.")
+                colormap = cm.get_cmap('tab20', codebook.shape[0])
+                q_np = q.detach().cpu().numpy()
+                q_unique = np.unique(q_np)
+                for idx in range(codebook.shape[0]):
+                    color = colormap(idx % 20)
+                    if idx in q_unique:
+                        mask = (q_np == idx)
+                        plt.scatter(
+                            z_low[mask, 0], z_low[mask, 1],
+                            color=color,
+                            marker='o',
+                            s=3,
+                            alpha=0.5,
+                        )
+                    if codebook is not None:
+                        if idx not in q_unique:
+                            plt.scatter(
+                            codebook_low[idx, 0], codebook_low[idx, 1],
+                            facecolor='blue',
+                            marker='x',
+                            s=15,
+                            alpha=0.8,
+                            label=f'unused code-word idx.{idx+1}' if idx < 20 else None
+                        )
+                        else:
+                            plt.scatter(
+                                codebook_low[idx, 0], codebook_low[idx, 1],
+                                facecolor=color,
+                                marker='*',
+                                edgecolor='red',
+                                linewidths=0.25,
+                                s=75,
+                                alpha=0.9,
+                                label=f'used codeword idx.{idx+1}' if idx < 20 else None
+                            )
+                plt.legend(
+                    loc='center left',          
+                    bbox_to_anchor=(1.02, 0.5),    
+                    borderaxespad=0.,
+                    fontsize=8
+                )
+                plt.tight_layout(rect=[0, 0, 0.85, 1])
 
-        plt.scatter(z_low[:, 0], z_low[:, 1], c='black', alpha=0.4, label='Encoder Output')
-        plt.scatter(z_q_low[:, 0], z_q_low[:, 1], c='blue', alpha=0.4, 
-                    edgecolors='red', linewidths=0.6, label='Quantized Encoder Output')
-        if codebook is not None:
-            plt.scatter(codebook_low[:, 0], codebook_low[:, 1], c='blue', alpha=0.4, label='Codebook')
+            else: # avoid colormap (used when K is large)
+                plt.scatter(z_low[:, 0], z_low[:, 1], alpha=0.5, s=3, marker='.', c='gray', label='latents (P_z)')
+                if codebook is not None:
+                    q_unique = q.unique().numpy()
+                    C_z = codebook_low
+                    Q_z = C_z[q_unique]
+                    all_idx = np.arange(C_z.shape[0])
+                    C_z_minus_Q_z = C_z[~np.isin(all_idx, q_unique)]
+                    plt.scatter(Q_z[:, 0], Q_z[:, 1], alpha=0.9, label='used code-words (Q_z)', marker='*', s=50, c='blue', edgecolors='red', linewidths=0.25)
+                    
+                    if C_z_minus_Q_z.shape[0] > 0:
+                        plt.scatter(C_z_minus_Q_z[:, 0], C_z_minus_Q_z[:, 1], 
+                                    facecolor='blue',
+                                    marker='x',
+                                    s=25,
+                                    alpha=0.8, label='unused code-words (C_z - Q_z)')
+                plt.legend()
+
+        else:
+            plt.scatter(z_low[:, 0], z_low[:, 1], alpha=0.4, label='Encoder output z (P_z)', marker='.')
+            if codebook is not None:
+                plt.scatter(codebook_low[:, 0], codebook_low[:, 1], label='Codebook (C)', marker='*')
+            plt.legend()       
+
 
         active_fraction = q.unique().numel() / codebook.shape[0] if q is not None else None
-
-        plt.legend()
         if not self.use_wandb:
             plt.title(f'Latent Visualization @ Step {step} | Active Fraction: {active_fraction}')
             plt.tight_layout()
             path = os.path.join(self.save_dir, f'step_{step}.png')
-            plt.savefig(path)
+            plt.savefig(path, dpi=200)
         else:
             fig = plt.gcf()
             fig_np = figure_to_numpy(fig)
@@ -138,6 +205,12 @@ class VectorQuantLatentVisualizer:
                                                   }, step=step)
 
         plt.close()
+
+
+def safe_reduce(method, data, **kwargs):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        return method(n_components=2, **kwargs).fit_transform(data)
 
 
 def figure_to_numpy(fig):
